@@ -13,3 +13,17 @@ Route::get('/v1/health', function () {
         'service' => 'nought-one-api',
     ]);
 });
+
+
+Route::prefix('v1')->group(function () {
+    Route::middleware('auth:sanctum')->get('/me', function (Request $request) {
+        return response()->json([
+            'user' => $request->user()->only(
+                'id',
+                'name',
+                'email',
+                'email_verified_at'
+            ),
+        ]);
+    });
+});
