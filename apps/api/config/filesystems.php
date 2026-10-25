@@ -30,6 +30,15 @@ return [
 
     'disks' => [
 
+        'card_assets' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/card-assets'),
+            'visibility' => 'private',
+            'directory_visibility' => 'private',
+            'serve' => false,
+            'throw' => true,
+        ],
+
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),

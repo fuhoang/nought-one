@@ -11,6 +11,7 @@ class CardResource extends PublicCardResource
         return [
             'id' => $this->id,
             ...parent::toArray($request),
+            'assets' => CardAssetResource::collection($this->whenLoaded('assets')),
             'links' => CardLinkResource::collection($this->whenLoaded('links')),
             'theme_settings' => $this->theme_settings,
             'is_published' => $this->is_published,

@@ -29,6 +29,7 @@ class PublicCardTest extends TestCase
                 'website' => 'https://example.com', 'location' => 'London',
                 'template_key' => 'minimal',
                 'links' => [],
+                'assets' => [],
             ],
         ]);
     }

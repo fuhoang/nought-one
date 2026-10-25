@@ -7,6 +7,7 @@ use App\Http\Requests\StoreCardRequest;
 use App\Http\Requests\UpdateCardRequest;
 use App\Http\Resources\CardResource;
 use App\Models\Card;
+use App\Services\CardAssetService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,26 +33,26 @@ class CardController extends Controller
     {
         $card = $this->saveCard($request->user()->cards()->make(), $request->validated());
 
-        return (new CardResource($card->load('links')))->response()->setStatusCode(201);
+        return (new CardResource($card->load(['links', 'assets'])))->response()->setStatusCode(201);
     }
 
     public function show(Card $card): CardResource
     {
         Gate::authorize('view', $card);
 
-        return new CardResource($card->load('links'));
+        return new CardResource($card->load(['links', 'assets']));
     }
 
     public function update(UpdateCardRequest $request, Card $card): CardResource
     {
-        return new CardResource($this->saveCard($card, $request->validated())->load('links'));
+        return new CardResource($this->saveCard($card, $request->validated())->load(['links', 'assets']));
     }
 
-    public function destroy(Card $card): Response
+    public function destroy(Card $card, CardAssetService $assets): Response
     {
         Gate::authorize('delete', $card);
 
-        $card->delete();
+        $assets->deleteCard($card);
 
         return response()->noContent();
     }

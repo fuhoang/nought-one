@@ -20,6 +20,7 @@ class PublicCardResource extends JsonResource
             'website' => $this->website,
             'location' => $this->location,
             'template_key' => $this->template_key,
+            'assets' => PublicCardAssetResource::collection($this->whenLoaded('assets')),
             'links' => $this->whenLoaded('links', fn () => PublicCardLinkResource::collection($this->links->where('is_visible', true)->values())),
         ];
     }

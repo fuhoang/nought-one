@@ -5,6 +5,7 @@ namespace Tests\Feature\Cards;
 use App\Models\Card;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -74,6 +75,7 @@ class CardCrudTest extends TestCase
 
     public function test_deletion_removes_card_and_dependents_but_preserves_other_cards(): void
     {
+        Storage::fake('local');
         $card = Card::factory()->published()->create();
         $other = Card::factory()->for($card->user)->create();
         $link = $card->links()->create(['type' => 'website', 'label' => 'Website', 'url' => 'https://example.com']);

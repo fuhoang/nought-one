@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\V1\CardAssetController;
 use App\Http\Controllers\Api\V1\CardController;
 use App\Http\Controllers\Api\V1\CardLinkController;
+use App\Http\Controllers\Api\V1\PublicCardAssetController;
 use App\Http\Controllers\Api\V1\PublicCardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -31,9 +33,17 @@ Route::prefix('v1')->group(function () {
 });
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
+    Route::get('/public/cards/{slug}/assets/{asset}', PublicCardAssetController::class)->whereUuid('asset')->name('public.cards.assets.content');
     Route::get('/public/cards/{slug}', PublicCardController::class)->name('public.cards.show');
 
     Route::middleware('auth:sanctum')->group(function () {
+        Route::prefix('cards/{card}/assets')->whereUuid('card')->scopeBindings()->name('cards.assets.')->group(function () {
+            Route::get('/', [CardAssetController::class, 'index'])->name('index');
+            Route::post('/', [CardAssetController::class, 'store'])->name('store');
+            Route::get('/{asset}/content', [CardAssetController::class, 'content'])->whereUuid('asset')->name('content');
+            Route::delete('/{asset}', [CardAssetController::class, 'destroy'])->whereUuid('asset')->name('destroy');
+        });
+
         Route::prefix('cards/{card}/links')->whereUuid('card')->scopeBindings()->name('cards.links.')->group(function () {
             Route::get('/', [CardLinkController::class, 'index'])->name('index');
             Route::post('/', [CardLinkController::class, 'store'])->name('store');

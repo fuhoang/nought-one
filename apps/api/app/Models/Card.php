@@ -49,7 +49,7 @@ class Card extends Model
 
     public function assets(): HasMany
     {
-        return $this->hasMany(CardAsset::class);
+        return $this->hasMany(CardAsset::class)->orderBy('type')->chaperone();
     }
 
     public function events(): HasMany
