@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
 export type CardFixture = { id: string; slug: string; display_name: string };
-export type Session = { api: APIRequestContext; card: CardFixture; mutate: (method: string, path: string, data?: Record<string, unknown>, multipart?: Record<string, string | { name: string; mimeType: string; buffer: Buffer }>) => Promise<import('@playwright/test').APIResponse> };
+export type Session = { email: string; password: string; api: APIRequestContext; card: CardFixture; mutate: (method: string, path: string, data?: Record<string, unknown>, multipart?: Record<string, string | { name: string; mimeType: string; buffer: Buffer }>) => Promise<import('@playwright/test').APIResponse> };
 
 export function png(color: 'light' | 'dark'): Buffer {
   return execFileSync('php', ['-r', `$im=imagecreatetruecolor(128,128); $c=imagecolorallocate($im,${color === 'light' ? '225,225,220' : '45,45,45'}); imagefill($im,0,0,$c); imagepng($im);`]);
@@ -23,7 +23,7 @@ export const test = base.extend<{ session: Session }>({
     const response = await mutate('POST', '/api/v1/cards', { slug: `test-${id}`, display_name: 'Alex Morgan', job_title: 'Independent designer', company: 'Studio Morgan', bio: 'Thoughtful identities. Lasting connections.\nDesigning the details that bring people together.', email: 'alex@example.com', phone: '+44 20 7946 0958', website: 'https://example.com', location: 'London, United Kingdom', is_published: true });
     expect(response.status()).toBe(201);
     const card = (await response.json()).data as CardFixture;
-    try { await provide({ api, card, mutate }); }
+    try { await provide({ api, card, mutate, email: `${id}@example.com`, password: 'IsolatedTesting123!' }); }
     finally { await mutate('DELETE', `/api/v1/cards/${card.id}`); await api.dispose(); }
   },
 });
