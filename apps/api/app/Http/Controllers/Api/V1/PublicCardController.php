@@ -10,7 +10,7 @@ class PublicCardController extends Controller
 {
     public function __invoke(string $slug): PublicCardResource
     {
-        $card = Card::query()->where('slug', $slug)->where('is_published', true)->firstOrFail();
+        $card = Card::query()->where('slug', $slug)->where('is_published', true)->with(['links' => fn ($query) => $query->where('is_visible', true)])->firstOrFail();
 
         return new PublicCardResource($card);
     }

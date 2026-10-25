@@ -44,7 +44,7 @@ class Card extends Model
 
     public function links(): HasMany
     {
-        return $this->hasMany(CardLink::class);
+        return $this->hasMany(CardLink::class)->orderBy('position')->orderBy('id');
     }
 
     public function assets(): HasMany

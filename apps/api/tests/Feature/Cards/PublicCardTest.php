@@ -28,6 +28,7 @@ class PublicCardTest extends TestCase
                 'phone' => '+44 1234 567890', 'email' => 'alex@example.com',
                 'website' => 'https://example.com', 'location' => 'London',
                 'template_key' => 'minimal',
+                'links' => [],
             ],
         ]);
     }
