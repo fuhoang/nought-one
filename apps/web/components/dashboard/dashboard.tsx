@@ -1,4 +1,5 @@
 'use client';
+/* Editor entry uses document navigation so browser Back participates in unsaved-change protection. */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -55,16 +56,17 @@ function CardDashboard({ origin, user, recheck }: { origin: string; user: User; 
     <a className="skip-link" href="#dashboard-main">Skip to your cards</a>
     <header className="dashboard-header"><Link className="account-brand" href="/">nought.one</Link><div className="account-menu"><span>{user.name}</span><button className="button button-secondary" disabled={signingOut} onClick={logout}>{signingOut ? 'Signing out…' : 'Sign out'}</button></div></header>
     <main id="dashboard-main" className="dashboard-main">
-      <div className="dashboard-heading"><div><p className="eyebrow">YOUR NOUGHT.ONE</p><h1>Your cards.</h1><p>Your introductions, all in one place.</p></div><span className="dashboard-count">{result ? `${result.meta.total} ${result.meta.total === 1 ? 'card' : 'cards'}` : ''}</span></div>
+      <div className="dashboard-heading"><div><p className="eyebrow">YOUR NOUGHT.ONE</p><h1>Your cards.</h1><p>Your introductions, all in one place.</p></div><div className="dashboard-tools"><a className="button button-primary" href="/dashboard/cards/new">Create card</a><span className="dashboard-count">{result ? `${result.meta.total} ${result.meta.total === 1 ? 'card' : 'cards'}` : ''}</span></div></div>
       <p role="alert" className="form-feedback">{logoutError}</p>
       {signingOut ? <p role="status">Signing out securely…</p>
         : error ? <div className="dashboard-empty" role="alert"><h2>Let’s try that again.</h2><p>{error}</p><button className="button button-secondary" onClick={() => load()}>Try again</button></div>
         : !result ? <p role="status">Loading your cards…</p>
-        : result.data.length === 0 ? <section className="dashboard-empty"><span className="empty-mark" aria-hidden="true">01</span><h2>A fresh start.</h2><p>You don’t have any cards yet.</p></section>
+        : result.data.length === 0 ? <section className="dashboard-empty"><span className="empty-mark" aria-hidden="true">01</span><h2>A fresh start.</h2><p>You don’t have any cards yet.</p><a className="button button-primary" href="/dashboard/cards/new">Create your first card</a></section>
         : <><ul className="dashboard-grid" aria-label="Your cards">{result.data.map(card => <li key={card.id} className="dashboard-card">
           <div className="dashboard-card-top"><span className="card-initials" aria-hidden="true">{card.display_name.trim().slice(0, 1).toUpperCase()}</span><span className="publication-status">{card.is_published ? 'Published' : 'Unpublished'}</span></div>
           <h2>{card.display_name}</h2><p className="dashboard-role">{[card.job_title, card.company].filter(Boolean).join(' · ') || 'Digital business card'}</p>
           <p className="dashboard-slug">/c/{card.slug}</p>
+          <a className="button button-secondary edit-card-link" href={`/dashboard/cards/${card.id}/edit`}>Edit card<span className="sr-only"> for {card.display_name}</span></a>
           {card.is_published ? <Link className="card-public-link" href={`/c/${encodeURIComponent(card.slug)}`} prefetch={false}>View public card <span aria-hidden="true">↗</span><span className="sr-only"> for {card.display_name}</span></Link> : <p className="card-private-note">Only visible to you</p>}
         </li>)}</ul>
         <nav className="dashboard-pagination" aria-label="Card pages"><button className="button button-secondary" disabled={page <= 1} onClick={() => load(page - 1)}>Previous</button><p role="status">Page {result.meta.current_page} of {result.meta.last_page}</p><button className="button button-secondary" disabled={page >= result.meta.last_page} onClick={() => load(page + 1)}>Next</button></nav></>}

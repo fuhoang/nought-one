@@ -5,8 +5,8 @@ import { execFileSync } from 'node:child_process';
 export type CardFixture = { id: string; slug: string; display_name: string };
 export type Session = { email: string; password: string; api: APIRequestContext; card: CardFixture; mutate: (method: string, path: string, data?: Record<string, unknown>, multipart?: Record<string, string | { name: string; mimeType: string; buffer: Buffer }>) => Promise<import('@playwright/test').APIResponse> };
 
-export function png(color: 'light' | 'dark'): Buffer {
-  return execFileSync('php', ['-r', `$im=imagecreatetruecolor(128,128); $c=imagecolorallocate($im,${color === 'light' ? '225,225,220' : '45,45,45'}); imagefill($im,0,0,$c); imagepng($im);`]);
+export function png(color: 'light' | 'dark', size = 128): Buffer {
+  return execFileSync('php', ['-r', `$im=imagecreatetruecolor(${size},${size}); $c=imagecolorallocate($im,${color === 'light' ? '225,225,220' : '45,45,45'}); imagefill($im,0,0,$c); imagepng($im);`]);
 }
 
 export const test = base.extend<{ session: Session }>({

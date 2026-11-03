@@ -2,14 +2,14 @@ export class ApiError extends Error {
   constructor(public status: number, message: string, public fields: Record<string, string[]> = {}) { super(message); }
 }
 
-export async function apiRequest<T>(origin: string, path: string, options: { method?: 'GET' | 'POST'; data?: Record<string, string>; signal?: AbortSignal } = {}): Promise<T> {
+export async function apiRequest<T>(origin: string, path: string, options: { method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'; data?: Record<string, unknown> | FormData; signal?: AbortSignal } = {}): Promise<T> {
   const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000);
   async function send(target: string, method = 'GET', token?: string) {
     try {
       return await fetch(`${origin}${target}`, {
         method, credentials: 'include', cache: 'no-store', signal,
-        headers: { Accept: 'application/json', ...(method !== 'GET' ? { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': token ?? '' } : {}) },
-        ...(method !== 'GET' ? { body: JSON.stringify(options.data ?? {}) } : {}),
+        headers: { Accept: 'application/json', ...(method !== 'GET' ? { ...(options.data instanceof FormData ? {} : { 'Content-Type': 'application/json' }), 'X-XSRF-TOKEN': token ?? '' } : {}) },
+        ...(method !== 'GET' ? { body: options.data instanceof FormData ? options.data : JSON.stringify(options.data ?? {}) } : {}),
       });
     } catch (error) {
       if (options.signal?.aborted) throw error;
@@ -24,9 +24,9 @@ export async function apiRequest<T>(origin: string, path: string, options: { met
     return decodeURIComponent(cookie.slice('XSRF-TOKEN='.length));
   }
   const method = options.method ?? 'GET';
-  let response = await send(path, method, method === 'POST' ? await csrf() : undefined);
+  let response = await send(path, method, method !== 'GET' ? await csrf() : undefined);
   // A 419 is rejected before the write runs. Do not retry other failed writes.
-  if (method === 'POST' && response.status === 419) response = await send(path, method, await csrf());
+  if (method !== 'GET' && response.status === 419) response = await send(path, method, await csrf());
   const body = response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) {
     const fields: Record<string, string[]> = {};
@@ -38,7 +38,7 @@ export async function apiRequest<T>(origin: string, path: string, options: { met
     const message = response.status === 401 ? 'Your session has ended. Please sign in again.'
       : response.status === 419 ? 'Your secure session changed. Please try again.'
       : response.status === 429 ? 'Too many attempts. Please wait a minute and try again.'
-      : response.status === 422 ? (Object.keys(fields).length ? 'Please check the highlighted fields.' : 'Invalid email or password.')
+      : response.status === 422 ? (Object.keys(fields).length ? 'Please check the highlighted fields.' : path === '/login' ? 'Invalid email or password.' : 'Please check your changes and try again.')
       : 'Something went wrong. Please try again.';
     throw new ApiError(response.status, message, fields);
   }
