@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { notifySessionChange, useSession, type User } from '@/lib/auth';
 import { apiRequest, ApiError } from '@/lib/browser-api';
+import { VerificationNotice } from '@/components/auth/verification-notice';
 import { getCards, type CardPage } from '@/lib/cards';
 
 export function Dashboard({ origin }: { origin: string }) {
@@ -57,6 +58,7 @@ function CardDashboard({ origin, user, recheck }: { origin: string; user: User; 
     <header className="dashboard-header"><Link className="account-brand" href="/">nought.one</Link><div className="account-menu"><span>{user.name}</span><button className="button button-secondary" disabled={signingOut} onClick={logout}>{signingOut ? 'Signing out…' : 'Sign out'}</button></div></header>
     <main id="dashboard-main" className="dashboard-main">
       <div className="dashboard-heading"><div><p className="eyebrow">YOUR NOUGHT.ONE</p><h1>Your cards.</h1><p>Your introductions, all in one place.</p></div><div className="dashboard-tools"><a className="button button-primary" href="/dashboard/cards/new">Create card</a><span className="dashboard-count">{result ? `${result.meta.total} ${result.meta.total === 1 ? 'card' : 'cards'}` : ''}</span></div></div>
+      <VerificationNotice origin={origin} user={user} onExpired={recheck} />
       <p role="alert" className="form-feedback">{logoutError}</p>
       {signingOut ? <p role="status">Signing out securely…</p>
         : error ? <div className="dashboard-empty" role="alert"><h2>Let’s try that again.</h2><p>{error}</p><button className="button button-secondary" onClick={() => load()}>Try again</button></div>

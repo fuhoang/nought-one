@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiRequest, ApiError } from './browser-api';
 
-export type User = { id: string; name: string; email: string };
+export type User = { id: string; name: string; email: string; email_verified_at: string | null };
 type Session = { status: 'loading' | 'guest' | 'error'; user?: never; message?: string } | { status: 'authenticated'; user: User; message?: never };
 
 export function useSession(origin: string) {

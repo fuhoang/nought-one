@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\CardController;
 use App\Http\Controllers\Api\V1\CardLinkController;
 use App\Http\Controllers\Api\V1\PublicCardAssetController;
 use App\Http\Controllers\Api\V1\PublicCardController;
+use App\Http\Middleware\EnsureCurrentSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -20,7 +21,7 @@ Route::get('/v1/health', function () {
 });
 
 Route::prefix('v1')->group(function () {
-    Route::middleware('auth:sanctum')->get('/me', function (Request $request) {
+    Route::middleware(['auth:sanctum', EnsureCurrentSession::class])->get('/me', function (Request $request) {
         return response()->json([
             'user' => $request->user()->only(
                 'id',
@@ -36,7 +37,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::get('/public/cards/{slug}/assets/{asset}', PublicCardAssetController::class)->whereUuid('asset')->name('public.cards.assets.content');
     Route::get('/public/cards/{slug}', PublicCardController::class)->name('public.cards.show');
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', EnsureCurrentSession::class])->group(function () {
         Route::prefix('cards/{card}/assets')->whereUuid('card')->scopeBindings()->name('cards.assets.')->group(function () {
             Route::get('/', [CardAssetController::class, 'index'])->name('index');
             Route::post('/', [CardAssetController::class, 'store'])->name('store');

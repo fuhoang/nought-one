@@ -78,3 +78,13 @@ body {
 .editor-dialog { margin: auto; width: calc(100% - 32px); max-width: 460px; max-height: calc(100dvh - 32px); overflow: auto; padding: 28px; border: 1px solid #ddd; border-radius: 4px; background: #fff; color: #171717; }.editor-dialog::backdrop { background: #0008; }.editor-dialog h2 { font-size: 26px; font-weight: 500; letter-spacing: -.7px; }.editor-dialog p { font-size: 14px; line-height: 1.7; color: #555; margin: 18px 0 24px; }
 @media (max-width: 850px) { .editor-layout { grid-template-columns: 1fr; gap: 0; }.link-form-grid { grid-template-columns: 1fr 1fr; }.link-form-grid .form-field:nth-child(3) { grid-column: 1 / -1; } }
 @media (max-width: 540px) { .editor-section { padding: 20px; }.profile-form-grid, .editor-images { grid-template-columns: 1fr; }.dashboard-heading { flex-wrap: wrap; }.dashboard-tools { align-items: flex-start; }.editor-header .account-brand { font-size: 20px; }.editor-actions .button { padding: 10px 12px; } }
+
+/* Account recovery and verification */
+.verification-notice { border: 1px solid var(--line, #d8d8d8); padding: 1.25rem; margin: 1.5rem 0; display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: center; }
+.verification-notice > div { flex: 1 1 18rem; min-width: 0; }
+.verification-notice h2 { font-size: 1rem; margin: 0 0 .35rem; }
+.verification-notice p { overflow-wrap: anywhere; margin: 0; }
+.verification-notice .form-feedback, .verification-notice .field-hint { flex-basis: 100%; }
+.verification-notice .form-feedback:empty { display: none; }
+.verification-status { font-size: .8rem; color: #555; }
+.auth-sheet > .button + .button { margin-top: .75rem; }

@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -32,6 +34,15 @@ class AuthController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+        $request->session()->put('auth_version', (int) Auth::user()->auth_version);
+        $request->session()->forget('password_hash_web');
+
+        try {
+            event(new Registered($user));
+        } catch (Throwable $exception) {
+            // Account creation succeeds even when email delivery is unavailable.
+            report($exception);
+        }
 
         return response()->json([
             'message' => 'Account created successfully.',
@@ -53,6 +64,8 @@ class AuthController extends Controller
         }
 
         $request->session()->regenerate();
+        $request->session()->put('auth_version', (int) Auth::user()->auth_version);
+        $request->session()->forget('password_hash_web');
 
         return response()->json([
             'message' => 'Logged in successfully.',

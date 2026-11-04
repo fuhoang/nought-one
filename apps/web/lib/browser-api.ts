@@ -1,5 +1,5 @@
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public fields: Record<string, string[]> = {}) { super(message); }
+  constructor(public status: number, message: string, public fields: Record<string, string[]> = {}, public retryAfter = 60) { super(message); }
 }
 
 export async function apiRequest<T>(origin: string, path: string, options: { method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'; data?: Record<string, unknown> | FormData; signal?: AbortSignal } = {}): Promise<T> {
@@ -40,7 +40,7 @@ export async function apiRequest<T>(origin: string, path: string, options: { met
       : response.status === 429 ? 'Too many attempts. Please wait a minute and try again.'
       : response.status === 422 ? (Object.keys(fields).length ? 'Please check the highlighted fields.' : path === '/login' ? 'Invalid email or password.' : 'Please check your changes and try again.')
       : 'Something went wrong. Please try again.';
-    throw new ApiError(response.status, message, fields);
+    throw new ApiError(response.status, message, fields, Math.max(1, Number(response.headers.get('Retry-After')) || 60));
   }
   return body as T;
 }

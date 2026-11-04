@@ -22,4 +22,14 @@ config([
     'filesystems.disks.local.root' => $runtime.'/private',
     'logging.channels.single.path' => $runtime.'/laravel.log',
 ]);
+// Capture only isolated test-account notifications; never deliver real email.
+config(['mail.default' => 'array']);
+Illuminate\Support\Facades\Event::listen(Illuminate\Notifications\Events\NotificationSent::class, function ($event) use ($runtime): void {
+    if ($event->channel !== 'mail') {
+        return;
+    }
+    $message = $event->notification->toMail($event->notifiable);
+    $kind = $event->notification instanceof Illuminate\Auth\Notifications\ResetPassword ? 'reset' : 'verify';
+    file_put_contents($runtime.'/'.hash('sha256', $event->notifiable->email).'-'.$kind.'.json', json_encode(['url' => $message->actionUrl]));
+});
 $app->handleRequest(Illuminate\Http\Request::capture());

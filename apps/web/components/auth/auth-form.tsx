@@ -61,6 +61,7 @@ export function AuthForm({ origin, mode }: { origin: string; mode: 'login' | 're
             <p ref={errorSummary} className="form-feedback" role="alert" tabIndex={-1}>{message}</p>
             <button className="button button-primary" type="submit">{busy ? (register ? 'Creating account…' : 'Signing in…') : (register ? 'Create account' : 'Sign in')}</button>
           </fieldset>
+          {!register && <p className="auth-switch"><Link href="/forgot-password">Forgot password?</Link></p>}
           <p className="auth-switch">{register ? 'Already have an account?' : 'New to nought.one?'} <Link href={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Create an account'}</Link></p>
         </form>}
     </section>
