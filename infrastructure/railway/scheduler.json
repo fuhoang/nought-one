@@ -1,0 +1,10 @@
+{
+  "startCommand": "/usr/local/bin/entrypoint.sh scheduler",
+  "healthcheckPath": null,
+  "healthcheckTimeout": 300,
+  "restartPolicyType": "ALWAYS",
+  "sleepApplication": false,
+  "drainingSeconds": 90,
+  "overlapSeconds": 0,
+  "numReplicas": 1
+}

@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { apiOrigin } from './site-config';
+import { serverApiOrigin } from './server-api-origin';
 
 export type PublicCard = {
   slug: string;
@@ -67,7 +68,7 @@ export function parsePublicCard(value: unknown, slug: string): PublicCard {
 export async function fetchPublicCard(slug: string): Promise<PublicCard | null> {
   if (slug.length > 100 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return null;
   try {
-    const response = await fetch(new URL(`/api/v1/public/cards/${encodeURIComponent(slug)}`, apiOrigin()), {
+    const response = await fetch(new URL(`/api/v1/public/cards/${encodeURIComponent(slug)}`, serverApiOrigin()), {
       cache: 'no-store', headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8000), redirect: 'error',
     });
     if (response.status === 404) return null;

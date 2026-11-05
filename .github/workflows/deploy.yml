@@ -1,0 +1,40 @@
+name: Deploy tested image
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [staging, production]
+        required: true
+      component:
+        type: choice
+        options: [web, backend]
+        required: true
+      image:
+        description: Tested GHCR image reference including @sha256 digest
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: railway-${{ inputs.environment }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node infrastructure/railway/deploy.mjs
+        env:
+          DEPLOY_COMPONENT: ${{ inputs.component }}
+          DEPLOY_IMAGE: ${{ inputs.image }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+          RAILWAY_ENVIRONMENT_ID: ${{ vars.RAILWAY_ENVIRONMENT_ID }}
+          RAILWAY_WEB_SERVICE_ID: ${{ vars.RAILWAY_WEB_SERVICE_ID }}
+          RAILWAY_API_SERVICE_ID: ${{ vars.RAILWAY_API_SERVICE_ID }}
+          RAILWAY_WORKER_SERVICE_ID: ${{ vars.RAILWAY_WORKER_SERVICE_ID }}
+          RAILWAY_SCHEDULER_SERVICE_ID: ${{ vars.RAILWAY_SCHEDULER_SERVICE_ID }}

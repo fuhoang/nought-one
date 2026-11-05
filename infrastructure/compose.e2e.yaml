@@ -1,0 +1,11 @@
+# Test-only notification capture and outage simulation; never use in production.
+services:
+  api:
+    environment:
+      APP_ENV: testing
+      CACHE_STORE: array
+      E2E_API_PATH: /app
+      E2E_RUNTIME_PATH: /tests/.runtime
+    volumes:
+      - ../apps/web/tests/support/api-server.php:/app/public/index.php:ro
+      - ../apps/web/tests/.runtime:/tests/.runtime

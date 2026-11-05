@@ -1,14 +1,15 @@
 <?php
 
-$api = realpath(__DIR__.'/../../../api');
+$api = getenv('E2E_API_PATH') ?: realpath(__DIR__.'/../../../api');
 require $api.'/vendor/autoload.php';
 $app = require $api.'/bootstrap/app.php';
+$app->instance('request', Illuminate\Http\Request::capture());
 $app->make(Illuminate\Contracts\Http\Kernel::class)->bootstrap();
-if (config('database.default') !== 'pgsql' || $app['db']->connection()->getDatabaseName() !== 'nought_one_e2e') {
+if (! $app->environment('testing') || config('database.default') !== 'pgsql' || $app['db']->connection()->getDatabaseName() !== 'nought_one_e2e') {
     http_response_code(500);
     exit('Refusing to run against a non-E2E database.');
 }
-$runtime = realpath(__DIR__.'/../.runtime');
+$runtime = getenv('E2E_RUNTIME_PATH') ?: realpath(__DIR__.'/../.runtime');
 if (is_file($runtime.'/public-api-unavailable') && str_starts_with($_SERVER['REQUEST_URI'], '/api/v1/public/cards/')) {
     http_response_code(503);
     header('Content-Type: application/json');

@@ -1,0 +1,13 @@
+{
+  "startCommand": "/usr/local/bin/entrypoint.sh api",
+  "healthcheckPath": "/ready",
+  "healthcheckTimeout": 300,
+  "restartPolicyType": "ALWAYS",
+  "sleepApplication": false,
+  "preDeployCommand": [
+    "/usr/local/bin/entrypoint.sh php artisan migrate --force --no-interaction"
+  ],
+  "drainingSeconds": 90,
+  "overlapSeconds": 0,
+  "numReplicas": 1
+}

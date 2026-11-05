@@ -8,4 +8,6 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('assets:cleanup')->everyMinute()->withoutOverlapping();
+Schedule::command('assets:cleanup')->everyMinute()->withoutOverlapping()->onOneServer();
+
+Schedule::call(fn () => touch(sys_get_temp_dir().'/scheduler-heartbeat'))->everyMinute();

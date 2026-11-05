@@ -43,3 +43,11 @@ downloaded cannot be remotely withdrawn; third-party social preview caches are
 outside the application's control. Next.js streamed unavailable pages may carry
 HTTP 200 with `noindex`; download and image routes return HTTP 404 for missing
 or unpublished cards.
+
+# Docker integration tests
+
+The production-image test stack and test-only browser overrides are documented in
+[the deployment guide](../../../docs/deployment.md#isolated-production-image-tests).
+Set `E2E_EXTERNAL_SERVERS=1` to use the running stack instead of starting host
+servers. Set `E2E_PHP_CONTAINER=nought-integration-api-1` to generate image fixtures
+with container PHP, so the browser runner does not require host PHP/GD.

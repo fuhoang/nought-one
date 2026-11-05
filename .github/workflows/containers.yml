@@ -1,0 +1,79 @@
+name: Container checks and images
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish tested images to GHCR
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  packages: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: node --test infrastructure/tests/deploy.test.mjs
+      - run: npm ci
+        working-directory: apps/web
+      - run: npm run lint && npm run typecheck
+        working-directory: apps/web
+      - run: docker compose -f infrastructure/compose.test.yaml --profile tools build
+      - run: docker compose -f infrastructure/compose.test.yaml up -d --wait postgres
+      - run: docker compose -f infrastructure/compose.test.yaml run --rm api php artisan migrate --force --no-interaction
+      - run: docker compose -f infrastructure/compose.test.yaml run --rm phpunit
+      - run: docker compose -f infrastructure/compose.test.yaml up -d --wait
+      - run: |
+          test "$(docker compose -f infrastructure/compose.test.yaml exec -T api id -u)" = 10001
+          test "$(docker compose -f infrastructure/compose.test.yaml exec -T web id -u)" = 10001
+          curl --fail http://localhost:8011/ready
+          curl --fail http://localhost:3011/health
+      - run: node infrastructure/tests/container-smoke.mjs
+      - run: sh infrastructure/tests/shutdown.sh
+      - run: |
+          mkdir -p apps/web/tests/.runtime/{assets,private,sessions}
+          chmod -R 777 apps/web/tests/.runtime
+          docker compose -f infrastructure/compose.test.yaml -f infrastructure/compose.e2e.yaml up -d --wait api
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: npm run test:e2e
+        working-directory: apps/web
+        env:
+          E2E_EXTERNAL_SERVERS: '1'
+          E2E_PHP_CONTAINER: nought-integration-api-1
+      - uses: docker/login-action@v3
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish the exact tested images
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+        run: |
+          repository=$(echo "$REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          for component in api web; do
+            image="ghcr.io/$repository-$component:$REVISION"
+            docker tag "nought-$component:local" "$image"
+            docker push "$image"
+            docker inspect --format '{{join .RepoDigests "\n"}}' "$image" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: apps/web/test-results
+      - if: always()
+        run: docker compose -f infrastructure/compose.test.yaml down -v

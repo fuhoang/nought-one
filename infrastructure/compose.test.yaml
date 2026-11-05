@@ -1,0 +1,104 @@
+# Standalone isolated stack. Never combine with the development compose file.
+name: nought-integration
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: nought_one_e2e
+      POSTGRES_USER: nought_test
+      POSTGRES_PASSWORD: isolated_test_only
+    volumes:
+      - test_postgres:/var/lib/postgresql/data
+      - ./postgres-test.sql:/docker-entrypoint-initdb.d/tests.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U nought_test -d nought_one_e2e"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  api:
+    image: nought-api:local
+    build: { context: ../apps/api, target: production }
+    environment: &backend
+      APP_ENV: production
+      CONTAINER_TESTING: "1"
+      APP_DEBUG: "false"
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      APP_URL: http://localhost:8011
+      FRONTEND_URL: http://localhost:3011
+      FORCE_PUBLIC_URL: "true"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: nought_one_e2e
+      DB_USERNAME: nought_test
+      DB_PASSWORD: isolated_test_only
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: database
+      SESSION_DOMAIN: ""
+      SESSION_SECURE_COOKIE: "false"
+      SESSION_COOKIE: nought_e2e_session
+      SANCTUM_STATEFUL_DOMAINS: localhost:3011,localhost:8011
+      CORS_ALLOWED_ORIGINS: http://localhost:3011
+      CARD_ASSETS_DISK: card_assets
+      MAIL_MAILER: array
+      LOG_CHANNEL: stderr
+    volumes:
+      - ./tests:/checks:ro
+      - test_assets:/app/storage/app/private/card-assets
+    ports: ["127.0.0.1:8011:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    stop_grace_period: 90s
+  worker:
+    image: nought-api:local
+    command: [worker]
+    environment:
+      <<: *backend
+      CONTAINER_ROLE: worker
+    volumes:
+      - test_assets:/app/storage/app/private/card-assets
+    depends_on: [api]
+    restart: unless-stopped
+    stop_grace_period: 90s
+  scheduler:
+    image: nought-api:local
+    command: [scheduler]
+    environment:
+      <<: *backend
+      CONTAINER_ROLE: scheduler
+    volumes:
+      - test_assets:/app/storage/app/private/card-assets
+    depends_on: [api]
+    stop_grace_period: 90s
+  web:
+    image: nought-web:local
+    build: { context: ../apps/web, target: production }
+    environment:
+      API_BASE_URL: http://localhost:8011
+      API_INTERNAL_URL: http://api:8080
+      PUBLIC_SITE_URL: http://localhost:3011
+    ports: ["127.0.0.1:3011:3000"]
+    depends_on: [api]
+    stop_grace_period: 30s
+  phpunit:
+    profiles: [tools]
+    build: { context: ../apps/api, target: development }
+    command: [php, vendor/bin/phpunit]
+    environment:
+      <<: *backend
+      APP_ENV: testing
+      DB_DATABASE: nought_one_test
+      APP_URL: http://localhost
+      FRONTEND_URL: http://localhost:3000
+      FORCE_PUBLIC_URL: "false"
+      SANCTUM_STATEFUL_DOMAINS: localhost:3000,localhost:8000
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      LOG_CHANNEL: single
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+    depends_on:
+      postgres: { condition: service_healthy }
+volumes:
+  test_assets:
+  test_postgres:

@@ -13,7 +13,7 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
   ],
-  webServer: [
+  webServer: process.env.E2E_EXTERNAL_SERVERS === '1' ? undefined : [
     { command: 'node tests/support/start-api.mjs', url: 'http://localhost:8011/up', reuseExistingServer: false, timeout: 60000 },
     { command: 'npm run start -- --port 3011 --hostname localhost', url: 'http://localhost:3011', reuseExistingServer: false, timeout: 60000,
       env: { API_BASE_URL: 'http://localhost:8011', PUBLIC_SITE_URL: 'http://localhost:3011' } },

@@ -6,7 +6,9 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -20,6 +22,19 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if (config('deployment.trusted_proxies')) {
+            TrustProxies::at(config('deployment.trusted_proxies'));
+        }
+
+        if (config('deployment.force_public_url')) {
+            URL::useOrigin(config('app.url'));
+            URL::forceScheme(parse_url(config('app.url'), PHP_URL_SCHEME));
+        }
+
+        Queue::looping(function (): void {
+            touch(sys_get_temp_dir().'/worker-heartbeat');
+        });
+
         ResetPassword::createUrlUsing(fn (User $user, string $token): string => rtrim(config('app.frontend_url'), '/').'/reset-password?'.http_build_query([
             'token' => $token,
             'email' => $user->getEmailForPasswordReset(),
