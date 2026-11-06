@@ -32,9 +32,19 @@ jobs:
       - run: node --test infrastructure/tests/deploy.test.mjs
       - run: npm ci
         working-directory: apps/web
+      - name: Check frontend before manual publishing
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        run: npm run lint && npm run typecheck
+        working-directory: apps/web
       - run: docker compose -f infrastructure/compose.test.yaml build
+      - name: Build PHPUnit runner before manual publishing
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        run: docker compose -f infrastructure/compose.test.yaml --profile tools build phpunit
       - run: docker compose -f infrastructure/compose.test.yaml up -d --wait postgres
       - run: docker compose -f infrastructure/compose.test.yaml run --rm api php artisan migrate --force --no-interaction
+      - name: Run PHPUnit before manual publishing
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        run: docker compose -f infrastructure/compose.test.yaml run --rm phpunit
       - run: docker compose -f infrastructure/compose.test.yaml up -d --wait
       - run: |
           test "$(docker compose -f infrastructure/compose.test.yaml exec -T api id -u)" = 10001

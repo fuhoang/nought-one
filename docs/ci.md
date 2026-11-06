@@ -36,7 +36,9 @@ secrets are required. `pull_request_target` is not used.
 
 ## Existing manual release tools
 
-Container checks no longer repeat native lint/typecheck/PHPUnit steps. Production
+Ordinary container CI no longer repeats native lint/typecheck/PHPUnit steps.
+Manual publishing still runs these checks before exporting images, preserving
+the existing release checks even when dispatched independently. Production
 image builds and end-to-end tests remain in the container workflow. Manual
 `publish=true` dispatch exports the exact tested images to a one-day artifact and
 passes them to a separate publishing job with `packages: write`. PRs cannot run
@@ -135,3 +137,26 @@ Moving staging to `develop`, enabling previews/CD, changing domains/variables,
 creating production infrastructure and activating protections all need separate
 approval. Before that deployment work, verify image persistence across redeploys
 and private S3-compatible storage. No Railway settings are changed by this CI work.
+
+## Implementation verification
+
+Local verification on 2026-11-06 passed Composer validation and locked install,
+all 203 PHPUnit tests (966 assertions), Pint check-only, npm locked install,
+ESLint, TypeScript checks, the production Next.js build, four release-script
+unit tests and actionlint 1.7.12 validation of all workflows. Both production
+Docker images built successfully. Container health, non-root execution, HTTP
+smoke checks and graceful shutdown checks passed. All 60 Playwright tests
+passed across desktop and mobile; the disposable integration stack was removed.
+
+The existing frontend lockfile reports eight moderate npm audit findings in the
+ESLint/TypeScript-ESLint chain through minimatch; no high or critical findings
+were reported. Dependency upgrades are a separate follow-up, not part of this
+CI change.
+
+`develop` and `feature/gitflow-ci` are pushed. No PR has been opened because
+Railway's automatic PR-environment setting is unconfirmed. Confirm it is disabled
+before opening the feature PR into `develop`. The new workflows have not yet run
+on GitHub; local results are not a substitute for successful hosted checks.
+Required-check protection remains a manual follow-up after the hosted runs pass.
+Staging web `/health` and API `/up` and `/ready` all returned HTTP 200 after the
+branch pushes. `main` and Railway settings were unchanged.
