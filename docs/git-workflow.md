@@ -64,23 +64,31 @@ Tag the next patch release on the approved `main` commit. Keep the hotfix branch
 until all synchronization PRs are merged. Do not force-push or cherry-pick a
 second independent history when a merge is appropriate.
 
-## Recommended branch protection (requires owner approval)
+## Active branch protection
 
-The initial audit on 2026-11-06 found no repository rulesets and no protection on
-`main`. No settings were changed. `develop` was created from verified `origin/main`
-commit `1a8e770cb0ad2216bf9cb293d54f6bfdc2015bce`.
+Enabled with owner approval and verified on 2026-11-08 for **both `main` and
+`develop`**:
 
-For **both** `main` and `develop`, require PRs, resolved review conversations and
-successful `API checks`, `Web checks` and `Container integration` checks; prevent
-force pushes and branch deletion. Require branches to be up to date before
-merging. Restrict direct pushes to `main` where supported. Do not require linear
-history if using the release/hotfix merge-commit strategy above.
+- All changes require a pull request, including changes by administrators.
+- Required GitHub Actions checks: `API checks`, `Web checks` and
+  `Container integration`. Checks are tied to the GitHub Actions app.
+- PR branches must be up to date with the target branch before merging.
+- Review conversations must be resolved.
+- Force pushes and branch deletion are blocked.
+- Mandatory approving reviews: **zero**, allowing the solo maintainer to merge
+  their own PR after CI passes. Stale approvals are dismissed when changes arrive;
+  code-owner and last-push approval requirements are disabled.
+- Linear history is not required, preserving release/hotfix merge commits.
 
-Activate required checks only after these exact job names have appeared in
-successful GitHub runs. Do not require the skipped manual publishing job.
-For a solo maintainer, require PRs with zero mandatory approvals (authors cannot
-approve their own PRs); use one approval when another reviewer is available.
-Settings changes need separate approval; unavailable plan/permission features
-must be reported, not bypassed.
+The manual publishing job is intentionally not a required check. The three
+required check names had successful hosted runs before protection was activated.
+Any later protection changes need owner approval; do not bypass protections to
+work around a failed or pending check.
 
-See [CI](ci.md) for local commands, failure diagnosis and Railway compatibility.
+If GitHub reports a branch is behind, update the PR branch through a merge and
+wait for fresh CI. For a protected long-lived branch such as `develop`, bring
+`main` back through a synchronization PR rather than pushing directly. Preserve
+both histories and do not force-push. The branch protection requirement does not
+change the Railway branch mapping.
+
+See [CI](ci.md) for local commands, failure diagnosis and verified Railway settings.

@@ -202,8 +202,9 @@ synchronized across both long-lived branches. Run the relevant checks before
 requesting review.
 
 See [the Git workflow guide](docs/git-workflow.md) for release conventions,
-semantic version tags and recommended branch protections. CI configuration alone
-does not enforce merge restrictions; branch protections must be configured in GitHub.
+semantic version tags and active branch protections. Both `main` and `develop`
+require PRs and passing API, web and container checks, including for administrators.
+Mandatory approvals are zero for the solo-maintainer workflow.
 
 ## Deployment
 
@@ -214,8 +215,8 @@ orchestrating Railway production services.
 
 Staging currently tracks `main`. The future `develop` → staging and `main` →
 production mapping requires a separately approved Railway configuration change.
-Enable Railway **Wait for CI** on GitHub-connected application services to gate
-autodeployments on successful checks. The manual image-publishing and deployment
+Railway **Wait for CI** is enabled and verified for both staging `web` and `api`
+services, gating their GitHub autodeployments on successful checks. The manual image-publishing and deployment
 workflows are separate from ordinary PR checks.
 
 See [deployment, environment configuration and release procedures](docs/deployment.md).
