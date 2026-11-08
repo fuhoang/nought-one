@@ -48,8 +48,9 @@ of this change. Allow for temporary artifact storage when using this option.
 The existing `deploy.yml` remains manually dispatched and unchanged. It deploys
 approved immutable image digests using protected environment configuration;
 see [deployment documentation](deployment.md). CI does not invoke it. Repository
-CI is not a gate on Railway GitHub auto-deployments unless Railway is separately
-configured to wait for checks.
+CI gates Railway GitHub autodeployments for the staging web and API services
+through their enabled Wait for CI settings. This does not turn the manual
+image-deployment workflow into an automatic release workflow.
 
 ## Local checks
 
@@ -103,26 +104,28 @@ with the isolated Compose setup. Treat network/package registry outages as
 infrastructure failures and rerun after resolving them. Required checks must
 match the job names above, not workflow filenames.
 
-## Railway compatibility audit (2026-11-06)
+## Confirmed Railway settings (2026-11-08)
 
-- The owner confirmed staging deploys from `main`. Read-only Railway metadata
-  also showed staging web and API deployed from `main` commit `1a8e770`.
-- Web and API are separate services and can deploy independently. Existing
-  Railway metadata identifies GitHub source `fuhoang/nought-one`. A separate
-  production environment contains web deployment metadata; this does not establish
-  that a live production application exists.
-- GitHub-source services can build on pushes to their configured branch. The
-  latest deployment metadata alone does not establish all auto-deploy or wait-for-CI
-  settings. Verify these settings before merging changes into `main`.
+- Project: **Nought One**, environment: **Staging**.
+- Both `web` and `api` use GitHub source `fuhoang/nought-one` and track `main`.
+  Their root directories are `/apps/web` and `/apps/api`, respectively.
+- **Wait for CI is enabled on both services.** The saved `source.checkSuites=true`
+  values were read back and verified, and the owner confirmed them in the UI.
+  Only those two settings changed; deployment branches and other environment
+  configuration were preserved.
+- A push or merge to `main` triggers the configured GitHub Actions workflows.
+  Railway waits for those workflows before deploying; a failed workflow blocks
+  that deployment. PR checks and post-merge push checks are separate runs.
+  See [Railway Wait for CI](https://docs.railway.com/deployments/github-autodeploys).
+- Automatic PR environments were confirmed disabled in the Railway UI before
+  opening the CI PR. Opening PRs does not intentionally provision previews.
+  Recheck this setting if project configuration changes.
+- Web and API remain independently deployable services. The existing production
+  environment's deployment metadata does not establish production launch readiness.
 - Dockerfiles and `infrastructure/railway/` release configuration are in Git.
-  Live Railway settings may differ; repository configuration is not evidence
-  that the manual image-deployment workflow is in use.
-- `main` remains the default branch. Changing it could affect integrations and
-  PR defaults; no change is needed for GitFlow.
-- Creating `develop` at the same verified commit does not update `main` or its
-  deployed code. Check Project Settings → Environments for automatic PR
-  environments before opening a PR: PR creation can provision infrastructure.
-  See [Railway PR environments](https://docs.railway.com/environments).
+  Live GitHub-source deployments are distinct from the manual image-deployment
+  workflow; having that workflow in the repository does not prove it was executed.
+- `main` remains the GitHub default branch.
 
 Future mapping, **not configured by this task**:
 
@@ -134,9 +137,10 @@ Future mapping, **not configured by this task**:
 | `main` | Production |
 
 Moving staging to `develop`, enabling previews/CD, changing domains/variables,
-creating production infrastructure and activating protections all need separate
-approval. Before that deployment work, verify image persistence across redeploys
-and private S3-compatible storage. No Railway settings are changed by this CI work.
+creating production infrastructure or changing the active protections need separate
+approval. Before production deployment work, verify image persistence across
+redeploys and private S3-compatible storage. The staging-to-`develop` transition
+and production launch remain future work.
 
 ## Implementation verification
 
@@ -148,15 +152,32 @@ Docker images built successfully. Container health, non-root execution, HTTP
 smoke checks and graceful shutdown checks passed. All 60 Playwright tests
 passed across desktop and mobile; the disposable integration stack was removed.
 
-The existing frontend lockfile reports eight moderate npm audit findings in the
+The 2026-11-06 audit of the frontend lockfile reported eight moderate findings in the
 ESLint/TypeScript-ESLint chain through minimatch; no high or critical findings
 were reported. Dependency upgrades are a separate follow-up, not part of this
 CI change.
 
-`develop` and `feature/gitflow-ci` are pushed. No PR has been opened because
-Railway's automatic PR-environment setting is unconfirmed. Confirm it is disabled
-before opening the feature PR into `develop`. The new workflows have not yet run
-on GitHub; local results are not a substitute for successful hosted checks.
-Required-check protection remains a manual follow-up after the hosted runs pass.
-Staging web `/health` and API `/up` and `/ready` all returned HTTP 200 after the
-branch pushes. `main` and Railway settings were unchanged.
+Hosted verification is complete. [PR #1](https://github.com/fuhoang/nought-one/pull/1)
+merged the CI changes into `develop`; [PR #2](https://github.com/fuhoang/nought-one/pull/2)
+promoted them to `main`. All three workflows passed on both PRs. The README
+followed through merged [PR #3](https://github.com/fuhoang/nought-one/pull/3) and
+[PR #4](https://github.com/fuhoang/nought-one/pull/4), also with passing CI.
+
+Verified hosted runs for the CI promotion:
+
+- [API checks](https://github.com/fuhoang/nought-one/actions/runs/42504508521)
+- [Web checks](https://github.com/fuhoang/nought-one/actions/runs/42504508545)
+- [Container integration](https://github.com/fuhoang/nought-one/actions/runs/42504508539)
+
+Manual image publishing was correctly skipped during PR runs. These are recorded
+successful runs, not a claim that every future commit has passed.
+
+After successful hosted checks, branch protections were enabled and read back on
+both `main` and `develop`: PRs, all three checks, up-to-date branches and resolved
+conversations are required, including for administrators. Force pushes and branch
+deletion are disabled; mandatory approvals are zero for the solo maintainer.
+See [the active protection rules](git-workflow.md#active-branch-protection).
+
+Staging web `/health` and API `/up` and `/ready` returned HTTP 200 during the
+original CI implementation verification. This is historical evidence, not ongoing
+uptime monitoring or confirmation of production readiness.
