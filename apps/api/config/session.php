@@ -143,6 +143,8 @@ return [
     |
     */
 
+    'csrf_cookie' => env('CSRF_COOKIE_NAME', 'XSRF-TOKEN'),
+
     'path' => env('SESSION_PATH', '/'),
 
     /*

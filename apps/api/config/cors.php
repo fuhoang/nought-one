@@ -34,7 +34,7 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => ['Retry-After'],
+    'exposed_headers' => ['Retry-After', 'X-CSRF-Cookie-Name'],
 
     'max_age' => 0,
 
