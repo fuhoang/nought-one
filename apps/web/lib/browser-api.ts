@@ -19,9 +19,11 @@ export async function apiRequest<T>(origin: string, path: string, options: { met
   async function csrf() {
     const response = await send('/sanctum/csrf-cookie');
     if (!response.ok) throw new ApiError(response.status, 'We couldn’t start a secure session. Please try again.');
-    const cookie = document.cookie.split('; ').find(item => item.startsWith('XSRF-TOKEN='));
+    const name = response.headers.get('X-CSRF-Cookie-Name') ?? 'XSRF-TOKEN';
+    const prefix = `${name}=`;
+    const cookie = document.cookie.split(';').map(item => item.trim()).find(item => item.startsWith(prefix));
     if (!cookie) throw new ApiError(419, 'Cookies are needed to sign in. Allow cookies and try again.');
-    return decodeURIComponent(cookie.slice('XSRF-TOKEN='.length));
+    return decodeURIComponent(cookie.slice(prefix.length));
   }
   const method = options.method ?? 'GET';
   let response = await send(path, method, method !== 'GET' ? await csrf() : undefined);
