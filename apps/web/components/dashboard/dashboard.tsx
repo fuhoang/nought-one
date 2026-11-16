@@ -1,7 +1,6 @@
 'use client';
 /* Editor entry uses document navigation so browser Back participates in unsaved-change protection. */
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { notifySessionChange, useSession, type User } from '@/lib/auth';
 import { apiRequest, ApiError } from '@/lib/browser-api';
@@ -10,8 +9,8 @@ import { getCards, type CardPage } from '@/lib/cards';
 
 export function Dashboard({ origin }: { origin: string }) {
   const session = useSession(origin);
-  const router = useRouter();
-  useEffect(() => { if (session.status === 'guest') router.replace('/login'); }, [session.status, router]);
+  // Discard preserved auth-page state when the API reports an expired session.
+  useEffect(() => { if (session.status === 'guest') window.location.replace('/login'); }, [session.status]);
   if (session.status !== 'authenticated') return <main className="card-state"><span className="state-brand">nought.one</span>
     {session.status === 'error' ? <><p role="alert">{session.message}</p><button className="button button-secondary" onClick={session.retry}>Try again</button></> : <p role="status">Checking your session…</p>}
   </main>;
@@ -20,7 +19,6 @@ export function Dashboard({ origin }: { origin: string }) {
 }
 
 function CardDashboard({ origin, user, recheck }: { origin: string; user: User; recheck: () => void }) {
-  const router = useRouter();
   const [page, setPage] = useState(1);
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<CardPage | null>(null);
@@ -50,8 +48,7 @@ function CardDashboard({ origin, user, recheck }: { origin: string; user: User; 
       }
     }
     notifySessionChange();
-    router.replace('/login');
-    recheck();
+    window.location.replace('/login');
   }
   return <div className="account-shell dashboard-shell">
     <a className="skip-link" href="#dashboard-main">Skip to your cards</a>
