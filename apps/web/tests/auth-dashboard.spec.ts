@@ -112,6 +112,34 @@ test('switching accounts never shows the previous user’s cards', async ({ page
   await expect(page.getByRole('heading', { name: session.card.display_name, exact: true })).toHaveCount(0);
 });
 
+test('signing in after session expiry does not bounce between restored auth pages', async ({ page, session }) => {
+  await login(page, session.email, session.password);
+  const card = page.getByRole('heading', { name: session.card.display_name, exact: true });
+  await expect(card).toBeVisible();
+  // Expire the real session without navigating away from the dashboard first.
+  await page.request.get('http://localhost:8011/sanctum/csrf-cookie');
+  const token = (await page.context().cookies()).find(cookie => cookie.name === 'XSRF-TOKEN')!.value;
+  expect((await page.request.post('http://localhost:8011/logout', { headers: {
+    Accept: 'application/json', Origin: 'http://localhost:3011', 'X-XSRF-TOKEN': decodeURIComponent(token),
+  } })).status()).toBe(200);
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
+  // Do not use page.goto: it would clear the very route state this test exercises.
+  await page.getByLabel('Email', { exact: true }).fill(session.email);
+  await page.getByLabel('Password', { exact: true }).fill(session.password);
+  const navigations: string[] = [];
+  page.on('framenavigated', frame => { if (frame === page.mainFrame()) navigations.push(new URL(frame.url()).pathname); });
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(card).toBeVisible();
+  // A subsequent tab-focus check must keep the authenticated route stable too.
+  const checked = page.waitForResponse(response => response.url().endsWith('/api/v1/me') && response.status() === 200);
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await checked;
+  await expect(card).toBeVisible();
+  expect(navigations).not.toContain('/login');
+  await expect(page).toHaveURL(/\/dashboard$/);
+});
+
 test('session and card loading failures can be retried', async ({ page, session }) => {
   await page.route('**/api/v1/me', route => route.abort());
   await page.goto('/login');

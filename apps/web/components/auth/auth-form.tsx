@@ -1,12 +1,10 @@
 'use client';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { apiRequest, ApiError } from '@/lib/browser-api';
 import { notifySessionChange, useSession } from '@/lib/auth';
 
 export function AuthForm({ origin, mode }: { origin: string; mode: 'login' | 'register' }) {
-  const router = useRouter();
   const session = useSession(origin);
   const register = mode === 'register';
   const [busy, setBusy] = useState(false);
@@ -14,7 +12,11 @@ export function AuthForm({ origin, mode }: { origin: string; mode: 'login' | 're
   const [fields, setFields] = useState<Record<string, string[]>>({});
   const errorSummary = useRef<HTMLParagraphElement>(null);
   const submitting = useRef(false);
-  useEffect(() => { if (session.status === 'authenticated') router.replace('/dashboard'); }, [session.status, router]);
+  // Cross the authentication boundary with a fresh document. Cache Components
+  // can otherwise restore a dashboard whose session state is still "guest".
+  useEffect(() => {
+    if (session.status === 'authenticated' && !submitting.current) window.location.replace('/dashboard');
+  }, [session.status]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,14 +27,14 @@ export function AuthForm({ origin, mode }: { origin: string; mode: 'login' | 're
     const values = Object.fromEntries(new FormData(form)) as Record<string, string>;
     try {
       await apiRequest(origin, register ? '/register' : '/login', { method: 'POST', data: values });
-      form.reset();
       notifySessionChange();
-      router.replace('/dashboard');
+      window.location.replace('/dashboard');
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : 'Something went wrong. Please try again.');
       setFields(error instanceof ApiError ? error.fields : {});
+      setBusy(false); submitting.current = false;
       requestAnimationFrame(() => errorSummary.current?.focus());
-    } finally { setBusy(false); submitting.current = false; }
+    }
   }
   function input(name: string, label: string, type: string, autocomplete: string, hint?: string, maxLength?: number) {
     const error = fields[name]?.join(' ');
