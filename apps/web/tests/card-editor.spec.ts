@@ -22,6 +22,47 @@ async function approve(page: Page, action: string) {
 }
 async function getCard(session: Session, id = session.card.id) { return (await (await session.api.get(`/api/v1/cards/${id}`)).json()).data; }
 
+test('reserved slugs preserve draft input and rejected published URL changes preserve the public card', async ({ page, session }) => {
+  await signIn(page, session);
+  await page.getByRole('link', { name: 'Create card', exact: true }).click();
+  await page.getByLabel('Display name').fill('Reserved name draft');
+  await page.getByLabel('Public URL slug').fill('dashboard');
+  await page.getByRole('button', { name: 'Create draft', exact: true }).click();
+  await expect(page.locator('#slug-error')).toContainText('reserved');
+  await expect(page.getByLabel('Display name')).toHaveValue('Reserved name draft');
+  page.once('dialog', dialog => dialog.accept());
+  await page.goto(`/dashboard/cards/${session.card.id}/edit`);
+  await page.getByLabel('Public URL slug').fill('login');
+  await page.getByLabel('Bio', { exact: true }).fill('Keep my draft');
+  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await approve(page, 'Save new URL');
+  await expect(page.locator('#slug-error')).toContainText('reserved');
+  await expect(page.getByLabel('Bio', { exact: true })).toHaveValue('Keep my draft');
+  expect((await getCard(session)).slug).toBe(session.card.slug);
+  expect((await session.api.get(`/api/v1/public/cards/${session.card.slug}`)).status()).toBe(200);
+});
+
+test('server errors preserve profile edits and allow an explicit successful retry', async ({ page, session }) => {
+  await edit(page, session);
+  await page.getByLabel('Bio', { exact: true }).fill('Retained after server failure');
+  const path = `**/api/v1/cards/${session.card.id}`;
+  let writes = 0;
+  await page.route(path, route => {
+    if (route.request().method() !== 'PATCH') return route.continue();
+    writes++;
+    return route.fulfill({ status: 503, contentType: 'text/html', body: 'Service unavailable' });
+  });
+  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Something went wrong' })).toBeVisible();
+  await expect(page.getByLabel('Bio', { exact: true })).toHaveValue('Retained after server failure');
+  expect(writes).toBe(1);
+  expect((await getCard(session)).bio).not.toBe('Retained after server failure');
+  await page.unroute(path);
+  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Profile saved.' })).toBeVisible();
+  expect((await getCard(session)).bio).toBe('Retained after server failure');
+});
+
 test('creates private drafts, validates uniqueness, and confirms deletion', async ({ page, session }, testInfo) => {
   await signIn(page, session);
   await page.getByRole('link', { name: 'Create card', exact: true }).click();
@@ -187,6 +228,18 @@ test('private images validate, replace safely, refresh previews and revoke on un
   await expect(region.getByRole('status').filter({ hasText: 'Avatar saved.' })).toBeVisible();
   expect((await (await session.api.get(`/api/v1/cards/${session.card.id}/assets/${avatarId}/content`)).body()).equals(oldBytes)).toBe(false);
   await expect(page.getByLabel('Bio', { exact: true })).toHaveValue('File picker must retain this');
+  const logoId = before.find((asset: { type: string }) => asset.type === 'logo').id;
+  const logoPath = `/api/v1/cards/${session.card.id}/assets/${logoId}/content`;
+  const oldLogo = await (await session.api.get(logoPath)).body();
+  await page.route(assetPath, route => route.request().method() === 'POST'
+    ? route.fulfill({ status: 500, json: { message: 'Server Error' } }) : route.continue());
+  await page.locator('#upload-logo').setInputFiles(dark);
+  await expect(region.getByRole('alert')).toContainText('Something went wrong');
+  expect((await (await session.api.get(logoPath)).body()).equals(oldLogo)).toBe(true);
+  await page.unroute(assetPath);
+  await region.getByRole('button', { name: 'Retry logo upload', exact: true }).click();
+  await expect(region.getByRole('status').filter({ hasText: 'Logo saved.' })).toBeVisible();
+  expect((await (await session.api.get(logoPath)).body()).equals(oldLogo)).toBe(false);
   await page.getByRole('button', { name: 'Unpublish card', exact: true }).click(); await approve(page, 'Unpublish');
   await expect(page.getByRole('heading', { name: 'Unpublished', exact: true })).toBeVisible();
   for (const asset of before) expect((await session.api.get(`/api/v1/public/cards/${session.card.slug}/assets/${asset.id}`)).status()).toBe(404);

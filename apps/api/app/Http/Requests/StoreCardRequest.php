@@ -18,7 +18,7 @@ class StoreCardRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'slug' => ['bail', 'required', 'string', 'max:100', 'regex:/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/', Rule::unique(Card::class, 'slug')],
+            'slug' => ['bail', 'required', 'string', 'max:100', 'regex:/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/', Rule::notIn($this->reservedSlugs()), Rule::unique(Card::class, 'slug')],
             'display_name' => ['required', 'string', 'max:150'],
             'job_title' => ['nullable', 'string', 'max:150'],
             'company' => ['nullable', 'string', 'max:150'],
@@ -32,6 +32,20 @@ class StoreCardRequest extends FormRequest
             'theme_settings' => ['missing'],
             'user_id' => ['missing'],
             'id' => ['missing'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return ['slug.not_in' => 'This URL slug is reserved. Please choose another.'];
+    }
+
+    protected function reservedSlugs(): array
+    {
+        return [
+            'api', 'c', 'dashboard', 'email', 'forgot-password', 'health',
+            'login', 'logout', 'ready', 'register', 'reset-password',
+            'sanctum', 'up', 'verify-email',
         ];
     }
 }

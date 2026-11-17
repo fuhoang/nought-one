@@ -23,4 +23,10 @@ class UpdateCardRequest extends StoreCardRequest
 
         return $rules;
     }
+
+    protected function reservedSlugs(): array
+    {
+        // Keep existing URLs editable without allowing a new reserved name.
+        return array_diff(parent::reservedSlugs(), [$this->route('card')->slug]);
+    }
 }
