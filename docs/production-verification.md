@@ -152,3 +152,28 @@ The deleted public website route returns HTTP 200 with the unavailable-page
 content (streamed Next.js response); it does not expose the deleted profile.
 No live test card or R2 objects remain. Synthetic QR/vCard downloads may remain
 in the local Downloads folder. Backups and monitoring remain deferred.
+
+## Background-job verification — 17 November 2026
+
+- Production uses the database queue and database cache. Worker and scheduler
+  start commands select their correct roles; both Railway restart policies are
+  `ALWAYS`. Their heartbeats were fresh (0–2 seconds).
+- A harmless queued cache-marker job was first validated in the isolated Docker
+  stack, then enqueued through the production API container. The production worker
+  completed it asynchronously. The marker was removed afterward; queued jobs,
+  failed jobs and asset cleanup backlog were all zero.
+- Natural hourly worker recycling was observed: process age advanced to 3,547
+  seconds, then reset to 11 seconds with a one-second heartbeat age, without a
+  manual restart or redeploy. Deployment `8c380ddc-766a-4412-ba2a-1b243386908d`
+  remained successful. A second queued marker job completed after recycling;
+  its marker was removed and all three backlog counts remained zero.
+- Existing `CardAssetFailureTest` coverage passed in the isolated PostgreSQL test
+  environment: **14 tests, 86 assertions**. This includes durable retry after
+  replacement, individual asset deletion and parent card deletion failures,
+  abandoned upload cleanup, and preserving retry records when cleanup fails.
+- The existing isolated queue probe completed its in-flight job during worker
+  shutdown; the worker exited with code 0 and restarted successfully. The disposable
+  integration stack and its volumes were removed after verification.
+- Production storage failures were not injected. Cleanup retry evidence is from
+  automated tests with simulated storage failures, not a live R2 outage. No email
+  was sent and no user records, production configuration or deployments changed.
