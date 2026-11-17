@@ -177,3 +177,38 @@ in the local Downloads folder. Backups and monitoring remain deferred.
 - Production storage failures were not injected. Cleanup retry evidence is from
   automated tests with simulated storage failures, not a live R2 outage. No email
   was sent and no user records, production configuration or deployments changed.
+
+## Editor regression follow-up — 17 November 2026
+
+- Complete Laravel suite: **221 tests, 1,110 assertions passed**, including
+  cross-account card, link and private asset authorization and publication checks.
+- Production-build editor browser suite: **18 tests passed** across desktop Chrome
+  and Pixel 7 emulation. Coverage includes a second authenticated account receiving
+  404 for another owner's card, draft creation/deletion, profile editing, unsaved
+  navigation protection, session expiry/recovery, publication and URL changes,
+  link ordering/visibility, avatar/logo replacement, and image deletion.
+- Added server-error coverage verifies profile input survives an HTTP 503 response
+  without automatic write retries. A logo replacement HTTP 500 preserves the old
+  bytes and succeeds on explicit retry. Existing tests cover network failures,
+  validation errors and CSRF recovery. Failures were injected only in local tests.
+- Desktop/mobile screenshots were reviewed; overflow assertions and the existing
+  editor/dialog accessibility scans passed. Mobile coverage is browser emulation,
+  not a physical-device test.
+- The owner selected explicit reservation of application-route names. New cards
+  and slug changes now reject `api`, `c`, `dashboard`, `email`, `forgot-password`,
+  `health`, `login`, `logout`, `ready`, `register`, `reset-password`, `sanctum`, `up`
+  and `verify-email` with a field-level 422 response. Exact names are reserved;
+  names such as `dashboard-studio` remain valid. Existing reserved slugs retain
+  their URLs and can still be saved unchanged; moving away releases that exception.
+- Lint, TypeScript, PHP formatting and production build passed. The first build
+  stopped after showing a Next.js security advisory; its requested retry passed.
+  An audit confirmed moderate Next.js and lint-toolchain advisories. Dependencies
+  were not upgraded in this change.
+- Live scheduler-redeployment session continuity passed after the owner signed in.
+  Production scheduler deployment `a72117fd-3f9e-403b-befc-56d59fff8db0` succeeded
+  using the same image digest as its predecessor
+  (`sha256:0ab6c08cca3f9930f3094a99385de27e9ba659cf96fa326133f01adf756d6078`).
+  The dashboard remained authenticated before and after a full reload, displaying
+  the existing card and Sign out control without another login. The scheduler
+  heartbeat was 34 seconds old. Only the scheduler was redeployed; no cards were
+  edited and no authentication cookies or credentials were extracted.
