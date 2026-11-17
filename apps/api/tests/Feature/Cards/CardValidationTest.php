@@ -88,6 +88,46 @@ class CardValidationTest extends TestCase
         $this->assertDatabaseHas('cards', ['id' => $card->id, 'slug' => 'my-slug']);
     }
 
+    #[DataProvider('reservedSlugs')]
+    public function test_reserved_slugs_return_422_for_create_and_rename(string $slug): void
+    {
+        $card = Card::factory()->create(['slug' => 'my-card']);
+        $card->refresh();
+        $this->actingAs($card->user);
+
+        $this->postJson('/api/v1/cards', ['slug' => $slug, 'display_name' => 'Alex'])
+            ->assertUnprocessable()->assertJsonValidationErrors(['slug' => 'This URL slug is reserved. Please choose another.']);
+        $this->patchJson('/api/v1/cards/'.$card->id, ['slug' => $slug, 'display_name' => 'Changed'])
+            ->assertUnprocessable()->assertJsonValidationErrors(['slug' => 'This URL slug is reserved. Please choose another.']);
+
+        $this->assertDatabaseCount('cards', 1);
+        $this->assertSame($card->getAttributes(), $card->fresh()->getAttributes());
+    }
+
+    public static function reservedSlugs(): array
+    {
+        return array_map(fn (string $slug): array => [$slug], [
+            'api', 'c', 'dashboard', 'email', 'forgot-password', 'health',
+            'login', 'logout', 'ready', 'register', 'reset-password', 'sanctum', 'up', 'verify-email',
+        ]);
+    }
+
+    public function test_existing_reserved_slug_remains_editable_but_cannot_switch_to_another_reserved_name(): void
+    {
+        $card = Card::factory()->published()->create(['slug' => 'dashboard']);
+        $this->actingAs($card->user);
+
+        $this->patchJson('/api/v1/cards/'.$card->id, ['slug' => 'dashboard', 'display_name' => 'Updated'])
+            ->assertOk()->assertJsonPath('data.display_name', 'Updated');
+        $this->getJson('/api/v1/public/cards/dashboard')->assertOk();
+        $this->patchJson('/api/v1/cards/'.$card->id, ['is_published' => false])->assertOk();
+        $this->patchJson('/api/v1/cards/'.$card->id, ['slug' => 'login'])->assertUnprocessable();
+        $this->patchJson('/api/v1/cards/'.$card->id, ['slug' => 'dashboard-studio'])->assertOk();
+        $this->patchJson('/api/v1/cards/'.$card->id, ['slug' => 'dashboard'])->assertUnprocessable();
+
+        $this->assertDatabaseHas('cards', ['id' => $card->id, 'slug' => 'dashboard-studio', 'display_name' => 'Updated', 'is_published' => false]);
+    }
+
     public function test_all_supported_fields_are_saved_and_unknown_fields_are_ignored(): void
     {
         $payload = [
