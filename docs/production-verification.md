@@ -212,3 +212,21 @@ in the local Downloads folder. Backups and monitoring remain deferred.
   the existing card and Sign out control without another login. The scheduler
   heartbeat was 34 seconds old. Only the scheduler was redeployed; no cards were
   edited and no authentication cookies or credentials were extracted.
+
+## Frontend dependency security review — 17 November 2026
+
+- Updated Next.js and `eslint-config-next` from 16.4.3 to 16.4.6. Refreshed
+  `typescript-eslint` from 8.71.2 to 8.73.0, which uses minimatch 11.0.9 for its
+  affected dependency path. No application behavior or dependency overrides changed.
+- `npm audit --omit=dev` reports **zero vulnerabilities**. The reported Next.js
+  cache-disclosure and minimatch advisories are resolved in the installed tree.
+- The full audit still reports **14 high-severity affected development packages**,
+  all propagated from one underlying picomatch ReDoS advisory:
+  [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf).
+  At review time, the advisory lists all releases through 4.0.7 as affected and
+  no patched release; npm also lists 4.0.7 as latest. This remains open pending an
+  upstream fix. The audit's proposed Next.js ESLint configuration downgrade was
+  not applied, and no audit suppression was added.
+- Validation passed: frontend lint, TypeScript checks, production build and the
+  complete **74-test desktop/mobile browser suite** against isolated local services.
+  The production build no longer stops for the previously reported Next.js advisory.
