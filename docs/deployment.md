@@ -6,6 +6,27 @@ runs independent services; Docker Compose is only for local development and test
 Production PostgreSQL is provisioned through Railway. Redis is not required:
 sessions, queues, scheduler locks and cache currently use PostgreSQL.
 
+## Current deployment status — 18 November 2026
+
+| Environment | GitHub branch | Services | Website / API |
+| --- | --- | --- | --- |
+| Staging | `develop` | web, API, PostgreSQL | `staging.nought.one` / `api.staging.nought.one` |
+| Production | `main` | web, API, worker, scheduler, PostgreSQL | `nought.one` / `api.nought.one` |
+
+Railway service metadata was read back on this date: all latest deployments were
+successful, with roots `/apps/web` and `/apps/api` and the branches above. These
+are GitHub-source Docker builds. The manual GHCR publishing/deployment workflows
+below are available separately; they are not the active automatic deployment path.
+Staging currently has no dedicated worker or scheduler, so it does not provide
+continuous background-job or scheduled-cleanup coverage equivalent to production.
+
+Cloudflare handles DNS; the domain remains registered at GoDaddy. The `www`
+hostname redirects permanently to `https://nought.one`, preserving path and query.
+Resend recovery/verification emails and private R2 storage were verified in both
+environments. Production persistence, background jobs, worker recycling and
+scheduler session continuity are recorded in [production verification](production-verification.md).
+Backups/PITR, restore rehearsal and external monitoring remain explicitly deferred.
+
 ## Images and runtime boundaries
 
 Build contexts are `apps/web` and `apps/api`. Both production images run as UID
@@ -23,7 +44,9 @@ signals and exits if a required process fails. Worker and scheduler commands use
 
 The worker's 60-second timeout is below the configured production retry interval
 of 120 seconds. Railway draining is 90 seconds for backend roles and 30 seconds
-for Next.js. Restart policy is ALWAYS: a worker recycles normally after one hour.
+for Next.js. Worker and scheduler restart policies are ALWAYS: a worker recycles normally after one hour.
+Live web/API services use ON_FAILURE; optional manual image-release templates
+use ALWAYS. Template values do not describe every live setting.
 Jobs must remain idempotent; a forced termination can still cause a retry.
 
 `/health` checks Next.js. Laravel `/up` checks boot and `/ready` checks the database
@@ -112,7 +135,7 @@ docker compose -f infrastructure/compose.test.yaml down -v
 
 ## Railway provisioning
 
-Create separate staging and production environments. In each, provision Railway
+For a new environment with full background-processing parity, provision Railway
 PostgreSQL plus four image-based services: `web`, `api`, `worker`, `scheduler`.
 Keep them in the same region; start with one replica each. Only web/API receive
 public domains. Do not expose PostgreSQL, workers or scheduler publicly. Do not
@@ -146,7 +169,7 @@ release branches. Keep image auto-updates and source-repository auto-deploys off
 for these image-based services. Do not trigger competing dashboard deployments
 while a release workflow is running.
 
-## Build once and release
+## Optional manual image release
 
 The Container checks and images workflow builds Linux AMD64 images on GitHub's
 Ubuntu runner, runs PHPUnit, runtime smoke/shutdown checks and desktop/mobile
@@ -169,10 +192,13 @@ must pass again for the rebuilt image.
 
 ## Domains, Sanctum and internal requests
 
-Example production domains are `app.nought.one` and `api.app.nought.one`; staging
-can use `staging.nought.one` and `api.staging.nought.one`. This keeps cookie scopes
-separate (`.app.nought.one` versus `.staging.nought.one`). Confirm domain ownership
-and configure Railway TLS before launch. Unrelated platform-generated domains
+Production domains are `nought.one` and `api.nought.one`; staging uses
+`staging.nought.one` and `api.staging.nought.one`. Production cookies scoped to
+`.nought.one` also reach staging subdomains, so use distinct session and CSRF cookie
+names across environments. The verified names are `nought_one_production_session`
+and `XSRF-TOKEN-PRODUCTION` for production, and `noughtone-session` and
+`XSRF-TOKEN-STAGING` for staging (scoped to `.staging.nought.one`). Preserve these
+values when configuring services. Unrelated platform-generated domains
 are unsuitable for this shared-cookie Sanctum setup.
 
 Set `API_BASE_URL` to the browser-reachable HTTPS API origin and `PUBLIC_SITE_URL`
@@ -185,7 +211,8 @@ calls it over private HTTP. Runtime URLs are not baked into the frontend image.
 Configure exact credentialed CORS origins, Sanctum hosts without schemes, secure
 HttpOnly session cookies and SameSite=Lax. The shared XSRF cookie is intentionally
 JavaScript-readable; the browser sends its decoded value in X-XSRF-TOKEN after
-requesting `/sanctum/csrf-cookie`. Authentication and ownership remain backend
+requesting `/sanctum/csrf-cookie`. The response's `X-CSRF-Cookie-Name` header tells
+the frontend which environment-specific cookie to read. Authentication and ownership remain backend
 checks. Do not use wildcard CORS or disable CSRF to resolve deployment issues.
 
 `TRUSTED_PROXIES=*` is suitable only behind controlled platform ingress: prevent
@@ -209,11 +236,12 @@ update its disk reference in a controlled migration; retain originals until
 verification succeeds. A clean production database does not need that migration.
 R2-to-S3 migration can retain the `card_assets_s3` logical disk and object keys.
 
-Production mail delivery is a separate launch prerequisite. The example uses the
-existing SMTP transport; Railway restricts SMTP to eligible plans. An HTTPS mail
-provider requires its own approved integration. Do not use the log mailer for real
-password reset/verification emails in production. No email delivery was provisioned
-or tested by this Docker change.
+Mail uses the integrated Resend HTTPS transport: `MAIL_MAILER=resend`,
+`RESEND_API_KEY`, `MAIL_FROM_ADDRESS` on the verified `nought.one` domain and
+`MAIL_FROM_NAME`. Keep keys in Railway variables and use separate keys for staging
+and production. Configure the environment's frontend URL so recovery links return
+to the correct website. Both recovery workflows have been verified; local tests
+continue to use array/log mail rather than sending real messages.
 
 Enable PostgreSQL backups/PITR and rehearse restoration before launch. Railway
 provisions the database, but backup configuration, restore checks and application
@@ -276,6 +304,8 @@ References: [Railway image/start commands](https://docs.railway.com/builds/build
 - Simulated PHP-FPM failure stopped the API container as intended.
 - Composer audit reported no advisories after the approved symfony/mime patch.
 
-Live Railway deployment, domain/TLS configuration, real mail delivery, R2 access,
-backup restoration and production monitoring remain launch verification tasks.
-No registry publication or live deployment was performed during implementation.
+This section records the original Docker implementation only. Later live
+deployment, domain/TLS, Resend, R2 and regression checks are recorded in
+[production verification](production-verification.md). Backups/restoration and
+monitoring remain deferred; optional manual image publication is not implied by
+successful GitHub-source deployments.

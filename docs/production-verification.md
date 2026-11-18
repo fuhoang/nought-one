@@ -230,3 +230,29 @@ in the local Downloads folder. Backups and monitoring remain deferred.
 - Validation passed: frontend lint, TypeScript checks, production build and the
   complete **74-test desktop/mobile browser suite** against isolated local services.
   The production build no longer stops for the previously reported Next.js advisory.
+
+## Remaining roadmap
+
+Status reviewed 18 November 2026. PRs #17–#22 promoted the background-job report,
+editor regression/slug changes and frontend security updates through `develop`
+to `main`. Documentation and Git maintenance are prepared on a separate branch;
+their publication remains pending PR review.
+
+| Task | Status / remaining work |
+| --- | --- |
+| Domain, email and private images | Verified: apex/www routing, Resend recovery/verification and private R2 storage |
+| Background processing | Verified: real queued jobs, automatic hourly recycling, graceful shutdown and isolated cleanup failure retries |
+| Editor/ownership regression | Passed: 221 Laravel tests / 1,110 assertions and desktop/mobile coverage; reserved application-route slugs enforced with existing-URL compatibility |
+| Frontend security update | Merged: Next.js 16.4.6, patched minimatch path; 74 browser tests passed, runtime audit clear at last check |
+| Development dependency advisory | Open: picomatch GHSA-fc5q-39xc-vjpf had no patch at the 17 November review; recheck upstream availability |
+| Rollback rehearsal | Staging API rollback/restoration passed on 17 November; frontend rollback and authenticated continuity during rollback remain |
+| Backups/PITR and isolated restoration | Deferred by owner; not enabled or claimed verified |
+| External uptime monitoring | Deferred by owner; provider and alerts not configured |
+
+The staging API rehearsal used the previous compatible backend image, checked
+health/readiness, unauthenticated 401 and CSRF/CORS, then restored the original
+image in deployment `ba76fac1-76ea-43b0-967d-4347d6415783`. It did not reverse
+migrations or change production. Later normal releases supersede that deployment.
+
+Mobile checks use browser emulation; failure injection uses isolated test
+services. These results do not claim physical-device testing or a live R2 outage.

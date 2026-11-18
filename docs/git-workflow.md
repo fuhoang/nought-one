@@ -10,6 +10,7 @@ long-lived branch.
 | --- | --- | --- |
 | `feature/<short-description>` | `develop` | `develop` |
 | `bugfix/<short-description>` | `develop` | `develop` |
+| `fix/<short-description>`, `docs/<short-description>` | `develop` | `develop` |
 | `release/<version>` | `develop` | `main`, then `develop` |
 | `hotfix/<short-description>` | `main` | `main`, then `develop` |
 
@@ -33,11 +34,17 @@ Delete the short-lived branch after merging.
 
 ## Releases
 
+The current routine release flow is a PR directly from `develop` into `main`,
+merged with a **merge commit**, after required checks pass. Feature/fix/docs PRs
+into `develop` are normally squash-merged. A release branch is optional when a
+release needs its own stabilization period; use the procedure below in that case.
+Merging into `develop` can deploy staging; merging into `main` can deploy production.
+
 1. Create `release/1.0.0` from updated `develop`. Limit changes to release fixes,
    documentation and version preparation; merge unrelated features into `develop`.
 2. Open a release PR into `main`. Require successful CI and release review.
-   Merging into `main` currently can trigger Railway staging deployments: confirm
-   deployment readiness before merging. The future production mapping is not active.
+   Merging into `main` can trigger Railway production deployments: confirm
+   deployment readiness before merging.
 3. Use a merge commit for the release PR so branch ancestry is preserved.
 4. Open a second PR from the release branch into `develop`, also using a merge
    commit, to preserve release fixes. Do not delete the release branch until both
@@ -92,3 +99,23 @@ both histories and do not force-push. The branch protection requirement does not
 change the Railway branch mapping.
 
 See [CI](ci.md) for local commands, failure diagnosis and verified Railway settings.
+
+## History and cleanup review — 18 November 2026
+
+At the review baseline, `main` (`8da0aad`) and `develop` (`96664ba`) had identical
+file contents. `main` had eight additional release merge commits and `develop`
+had no unique commits. This is expected for direct develop-to-main merge releases;
+it does not imply missing application changes or require a history rewrite.
+
+Before deleting a short-lived branch, verify its exact tip matches a merged PR
+and that the PR merge commit is reachable from both long-lived branches. Squash
+merges do not retain the original feature tip as an ancestor, so `git branch
+--merged` alone is insufficient. Preserve branches with extra commits or open PRs.
+Use an expected-tip lease when deleting remote refs so concurrent work is retained.
+Never delete `main`, `develop`, or a branch checked out in another worktree.
+
+This review removed 12 completed short-lived branches locally and remotely,
+corresponding to merged PRs #1, #3, #5, #7, #8, #9, #11, #13, #15, #17, #19 and
+#21. Every branch tip matched its merged PR; each merge commit was reachable from
+both `main` and `develop`. Remote deletions were atomic and guarded by exact-tip
+leases. No long-lived history, tags, deployment settings or branch protections changed.

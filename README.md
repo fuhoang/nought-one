@@ -213,15 +213,17 @@ with Railway-managed PostgreSQL and persistent private object storage. The three
 backend roles share one Laravel image. Docker Compose is for local use, not for
 orchestrating Railway production services.
 
-Staging currently tracks `main`. The future `develop` → staging and `main` →
-production mapping requires a separately approved Railway configuration change.
-Railway **Wait for CI** is enabled and verified for both staging `web` and `api`
-services, gating their GitHub autodeployments on successful checks. The manual image-publishing and deployment
-workflows are separate from ordinary PR checks.
+Staging tracks `develop`; production tracks `main`. Staging has web, API and
+PostgreSQL services. Production also has separate worker and scheduler services.
+The websites are `https://staging.nought.one` and `https://nought.one`, with API
+origins `https://api.staging.nought.one` and `https://api.nought.one`.
+Railway GitHub-source deployments use the application Dockerfiles and Wait for CI.
+The manual image-publishing and deployment workflows remain a separate release path.
 
 See [deployment, environment configuration and release procedures](docs/deployment.md).
-Verify persistent image storage across redeploys before treating a deployment as
-production-ready.
+Resend email delivery and private R2 image storage have been verified. See the
+[verification record and remaining roadmap](docs/production-verification.md#remaining-roadmap)
+for completed checks and outstanding work, including deferred backups and monitoring.
 
 ## Further reading
 
