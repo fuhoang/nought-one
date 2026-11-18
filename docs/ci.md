@@ -48,7 +48,7 @@ of this change. Allow for temporary artifact storage when using this option.
 The existing `deploy.yml` remains manually dispatched and unchanged. It deploys
 approved immutable image digests using protected environment configuration;
 see [deployment documentation](deployment.md). CI does not invoke it. Repository
-CI gates Railway GitHub autodeployments for the staging web and API services
+CI gates Railway GitHub autodeployments for the configured application services
 through their enabled Wait for CI settings. This does not turn the manual
 image-deployment workflow into an automatic release workflow.
 
@@ -104,43 +104,30 @@ with the isolated Compose setup. Treat network/package registry outages as
 infrastructure failures and rerun after resolving them. Required checks must
 match the job names above, not workflow filenames.
 
-## Confirmed Railway settings (2026-11-08)
+## Railway deployment mapping — reviewed 18 November 2026
 
-- Project: **Nought One**, environment: **Staging**.
-- Both `web` and `api` use GitHub source `fuhoang/nought-one` and track `main`.
-  Their root directories are `/apps/web` and `/apps/api`, respectively.
-- **Wait for CI is enabled on both services.** The saved `source.checkSuites=true`
-  values were read back and verified, and the owner confirmed them in the UI.
-  Only those two settings changed; deployment branches and other environment
-  configuration were preserved.
-- A push or merge to `main` triggers the configured GitHub Actions workflows.
-  Railway waits for those workflows before deploying; a failed workflow blocks
-  that deployment. PR checks and post-merge push checks are separate runs.
-  See [Railway Wait for CI](https://docs.railway.com/deployments/github-autodeploys).
-- Automatic PR environments were confirmed disabled in the Railway UI before
-  opening the CI PR. Opening PRs does not intentionally provision previews.
-  Recheck this setting if project configuration changes.
-- Web and API remain independently deployable services. The existing production
-  environment's deployment metadata does not establish production launch readiness.
-- Dockerfiles and `infrastructure/railway/` release configuration are in Git.
-  Live GitHub-source deployments are distinct from the manual image-deployment
-  workflow; having that workflow in the repository does not prove it was executed.
-- `main` remains the GitHub default branch.
+| Branch | Environment | Application services |
+| --- | --- | --- |
+| Feature/fix/docs branches | CI only | No deployment intended |
+| `develop` | Staging | web and API |
+| `main` | Production | web, API, worker and scheduler |
 
-Future mapping, **not configured by this task**:
+Railway service metadata confirms the latest successful deployments use the
+branches above. Application roots are `/apps/web` and `/apps/api`; each environment
+has managed PostgreSQL. Staging has no separate worker or scheduler today.
 
-| Branch | Intended environment |
-| --- | --- |
-| `feature/*`, `bugfix/*` | CI only |
-| `develop` | Staging |
-| `release/*` | CI, optional explicitly approved preview |
-| `main` | Production |
+Wait for CI was enabled for the GitHub-source application services during setup.
+PR checks and post-merge push checks are separate runs. The branch mapping was
+read back during this review; CI gating and PR-environment settings were not
+changed or independently reverified in this review. Automatic PR environments
+were previously confirmed disabled. Recheck gating/settings before changing the
+release process. `main` remains the repository's default branch.
 
-Moving staging to `develop`, enabling previews/CD, changing domains/variables,
-creating production infrastructure or changing the active protections need separate
-approval. Before production deployment work, verify image persistence across
-redeploys and private S3-compatible storage. The staging-to-`develop` transition
-and production launch remain future work.
+Live GitHub-source deployments build the Dockerfiles in Railway. Manual image
+publication and `deploy.yml` remain separate, explicitly dispatched tools; the
+presence of those workflows does not mean production uses their GHCR digests.
+See [deployment details](deployment.md) and the
+[verification record and remaining roadmap](production-verification.md#remaining-roadmap).
 
 ## Implementation verification
 
@@ -154,8 +141,8 @@ passed across desktop and mobile; the disposable integration stack was removed.
 
 The 2026-11-06 audit of the frontend lockfile reported eight moderate findings in the
 ESLint/TypeScript-ESLint chain through minimatch; no high or critical findings
-were reported. Dependency upgrades are a separate follow-up, not part of this
-CI change.
+were reported. This is historical evidence; the 17 November dependency update and remaining
+picomatch advisory are recorded in [production verification](production-verification.md).
 
 Hosted verification is complete. [PR #1](https://github.com/fuhoang/nought-one/pull/1)
 merged the CI changes into `develop`; [PR #2](https://github.com/fuhoang/nought-one/pull/2)
