@@ -233,10 +233,9 @@ in the local Downloads folder. Backups and monitoring remain deferred.
 
 ## Remaining roadmap
 
-Status reviewed 18 November 2026. PRs #17–#22 promoted the background-job report,
+Status reviewed 23 November 2026. PRs #17–#22 promoted the background-job report,
 editor regression/slug changes and frontend security updates through `develop`
-to `main`. Documentation and Git maintenance are prepared on a separate branch;
-their publication remains pending PR review.
+to `main`. Documentation and Git maintenance were promoted through PRs #23–#24.
 
 | Task | Status / remaining work |
 | --- | --- |
@@ -245,7 +244,7 @@ their publication remains pending PR review.
 | Editor/ownership regression | Passed: 221 Laravel tests / 1,110 assertions and desktop/mobile coverage; reserved application-route slugs enforced with existing-URL compatibility |
 | Frontend security update | Merged: Next.js 16.4.6, patched minimatch path; 74 browser tests passed, runtime audit clear at last check |
 | Development dependency advisory | Open: picomatch GHSA-fc5q-39xc-vjpf had no patch at the 17 November review; recheck upstream availability |
-| Rollback rehearsal | Staging API rollback/restoration passed on 17 November; frontend rollback and authenticated continuity during rollback remain |
+| Rollback rehearsal | Staging API rollback/restoration passed on 17 November; previous frontend image redeployment/restoration and authenticated continuity passed on 23 November (details below) |
 | Backups/PITR and isolated restoration | Deferred by owner; not enabled or claimed verified |
 | External uptime monitoring | Deferred by owner; provider and alerts not configured |
 
@@ -256,3 +255,31 @@ migrations or change production. Later normal releases supersede that deployment
 
 Mobile checks use browser emulation; failure injection uses isolated test
 services. These results do not claim physical-device testing or a live R2 outage.
+
+## Staging frontend recovery rehearsal — 23 November 2026
+
+The owner signed in before the rehearsal. Only staging web was changed; production,
+the API, database, configuration and card data were not modified.
+
+- Baseline: deployment `e789f792-b0ab-409b-92a3-793e2027ed97`, commit `4e473fd`,
+  image `sha256:092b2049f372fd19a22f345b8ee962d96b6b7e88b5927c6af17ac4d526acc69c`.
+- Previous release: `5d8b4b6a-7d21-4dfe-866a-9ec08dea941b`, commit `96664ba`,
+  image `sha256:647baaf9fc608de8cdf122b90bcdcb3c421603d18a9bd6683318e4b78d652575`.
+  The source difference was documentation only, preserving the security and login fixes.
+- Railway reported `canRollback=false` but `canRedeploy=true` for that previous
+  release. `deploymentRedeploy` with `usePreviousImageTag=true` succeeded as
+  `c70748ed-453c-4363-b1b4-62a876e15d5e`; its digest matched the recorded previous
+  image exactly. This verifies recovery by previous-image redeployment, not direct
+  rollback eligibility for that older deployment.
+- The signed-in dashboard survived a full reload on the previous image, with the
+  existing card visible and no new login. Web health, homepage, published card,
+  vCard and QR endpoints returned 200; the public API payload matched baseline.
+- Restored the original deployment using `deploymentRollback`. Resulting deployment
+  `36fc86f1-a024-453c-ae7e-5072cca7e42f` succeeded with the exact baseline digest.
+  Health, public card and both downloads returned 200. Another full dashboard
+  reload retained authentication and the existing card without another login.
+
+No schema reversal, credential extraction, test account creation or card mutation
+was needed. This rehearses deployment recovery and session continuity between
+compatible images; it does not demonstrate recovery across incompatible code or
+schema changes, nor continuous zero-downtime availability during every instant.
