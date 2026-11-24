@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Card;
+use App\Support\CardAppearance;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -27,9 +28,11 @@ class StoreCardRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'url:http,https', 'max:2048'],
             'location' => ['nullable', 'string', 'max:255'],
-            'template_key' => ['sometimes', 'required', Rule::in(['minimal'])],
+            'template_key' => ['sometimes', 'required', Rule::in(CardAppearance::TEMPLATES)],
             'is_published' => ['sometimes', 'required', 'boolean'],
-            'theme_settings' => ['missing'],
+            'theme_settings' => ['sometimes', 'nullable', 'array:mode,accent', 'required_array_keys:mode,accent'],
+            'theme_settings.mode' => ['required_with:theme_settings', 'string', Rule::in(CardAppearance::MODES)],
+            'theme_settings.accent' => ['required_with:theme_settings', 'string', Rule::in(CardAppearance::ACCENTS)],
             'user_id' => ['missing'],
             'id' => ['missing'],
         ];

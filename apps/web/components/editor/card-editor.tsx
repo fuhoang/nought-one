@@ -2,10 +2,13 @@
 /* eslint-disable @next/next/no-location-assign-relative-destination -- Document navigation ensures beforeunload covers editor exits, including browser Back. */
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { apiRequest, ApiError } from '@/lib/browser-api';
-import { profileDraft, profileFields, type Card, type ProfileDraft } from '@/lib/cards';
+import { profileDraft, profileFields, type Card, type CardAsset, type CardLink, type ProfileDraft } from '@/lib/cards';
 import { useConfirmation } from './confirm-dialog';
 import { LinksEditor } from './links-editor';
 import { AssetsEditor } from './assets-editor';
+import { appearanceOf, type Appearance } from '@/lib/card-appearance';
+import { AppearanceEditor } from './appearance-editor';
+import { CardPreview } from './card-preview';
 
 export type PanelProps = { origin: string; cardId: string; onUnauthorized: () => void };
 export function errorMessage(error: unknown, onUnauthorized: () => void) {
@@ -18,6 +21,11 @@ export function CardEditor({ origin, site, id, locked, onUnauthorized }: { origi
   const [card, setCard] = useState<Card | null>(null);
   const [draft, setDraft] = useState<ProfileDraft>(profileDraft());
   const [saved, setSaved] = useState<ProfileDraft>(profileDraft());
+  const [appearance, setAppearance] = useState<Appearance>(appearanceOf());
+  const [savedAppearance, setSavedAppearance] = useState<Appearance>(appearanceOf());
+  const [assetVersion, setAssetVersion] = useState(0);
+  const updateLinks = useCallback((links: CardLink[]) => setCard(previous => previous && { ...previous, links }), []);
+  const updateAssets = useCallback((assets: CardAsset[]) => { setCard(previous => previous && { ...previous, assets }); setAssetVersion(value => value + 1); }, []);
   const [loading, setLoading] = useState(!!id);
   const [loadError, setLoadError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -29,7 +37,8 @@ export function CardEditor({ origin, site, id, locked, onUnauthorized }: { origi
   const [dirtyParts, setDirtyParts] = useState<Record<string, boolean>>({});
   const markDirty = useCallback((key: string, value: boolean) => setDirtyParts(previous => previous[key] === value ? previous : { ...previous, [key]: value }), []);
   const profileDirty = JSON.stringify(draft) !== JSON.stringify(saved);
-  const dirty = profileDirty || Object.values(dirtyParts).some(Boolean);
+  const appearanceDirty = JSON.stringify(appearance) !== JSON.stringify(savedAppearance);
+  const dirty = profileDirty || appearanceDirty || Object.values(dirtyParts).some(Boolean);
   const allowLeave = useRef(false);
   const feedback = useRef<HTMLParagraphElement>(null);
   const { confirm, modal } = useConfirmation(locked);
@@ -46,7 +55,7 @@ export function CardEditor({ origin, site, id, locked, onUnauthorized }: { origi
       : Promise.reject(new ApiError(404, 'This card is unavailable.'));
     request.then(({ data }) => {
       if (controller.signal.aborted) return;
-      setCard(data); setDraft(profileDraft(data)); setSaved(profileDraft(data)); setLoading(false);
+      setCard(data); setDraft(profileDraft(data)); setSaved(profileDraft(data)); setAppearance(appearanceOf(data)); setSavedAppearance(appearanceOf(data)); setLoading(false);
     }).catch(error => {
       if (controller.signal.aborted) return;
       setLoadError(errorMessage(error, onUnauthorized)); setLoading(false);
@@ -64,18 +73,28 @@ export function CardEditor({ origin, site, id, locked, onUnauthorized }: { origi
       if (card?.is_published && draft.slug !== saved.slug && !await confirm('Change public URL?', 'The old link and previously shared QR codes will stop working. Save this new public URL?', 'Save new URL')) return;
       const payload = Object.fromEntries(profileFields.map(key => [key, ['slug', 'display_name'].includes(key) ? draft[key] : draft[key] || null]));
       const { data } = await apiRequest<{ data: Card }>(origin, card ? `/api/v1/cards/${card.id}` : '/api/v1/cards', { method: card ? 'PATCH' : 'POST', data: { ...payload, ...(card ? {} : { is_published: false, template_key: 'minimal' }) } });
-      setCard(data); setDraft(profileDraft(data)); setSaved(profileDraft(data)); setMessage('Profile saved.');
+      setCard(previous => previous ? { ...data, links: previous.links, assets: previous.assets } : data); setDraft(profileDraft(data)); setSaved(profileDraft(data)); setMessage('Profile saved.');
       if (!card) { allowLeave.current = true; window.location.replace(`/dashboard/cards/${data.id}/edit`); }
+    } catch (error) { fail(error); } finally { finish(); }
+  }
+  async function saveAppearance() {
+    if (!card || !begin()) return;
+    setFields({});
+    try {
+      const { data } = await apiRequest<{ data: Card }>(origin, `/api/v1/cards/${card.id}`, { method: 'PATCH', data: appearance });
+      setCard(previous => previous && { ...previous, template_key: data.template_key, theme_settings: data.theme_settings });
+      const persisted = appearanceOf(data);
+      setAppearance(persisted); setSavedAppearance(persisted); setMessage('Appearance saved. Profile edits remain separate.');
     } catch (error) { fail(error); } finally { finish(); }
   }
   async function publication() {
     if (!card || !begin()) return;
     try {
       const action = card.is_published ? 'Unpublish' : 'Publish';
-      if (!await confirm(`${action} this card?`, card.is_published ? 'Your public card, contact download and public images will become unavailable.' : 'Your saved profile, visible links and images will become public. Unsaved profile edits will not be included.', action)) return;
+      if (!await confirm(`${action} this card?`, card.is_published ? 'Your public card, contact download and public images will become unavailable.' : 'Your saved profile, visible links and images will become public. Unsaved profile and appearance edits will not be included.', action)) return;
       const { data } = await apiRequest<{ data: Card }>(origin, `/api/v1/cards/${card.id}`, { method: 'PATCH', data: { is_published: !card.is_published } });
       setCard(previous => previous && { ...previous, is_published: data.is_published });
-      setMessage(data.is_published ? 'Card published. Unsaved profile edits remain unsaved.' : 'Card unpublished.');
+      setMessage(data.is_published ? 'Card published. Unsaved profile and appearance edits remain unsaved.' : 'Card unpublished.');
     } catch (error) { fail(error); } finally { finish(); }
   }
   async function remove() {
@@ -94,7 +113,7 @@ export function CardEditor({ origin, site, id, locked, onUnauthorized }: { origi
       <p className="eyebrow">YOUR INTRODUCTION</p><h1>{id ? 'Edit your card.' : 'Make it yours.'}</h1>
       {loading ? <p role="status">Loading your card…</p> : loadError ? <section className="editor-section"><h2>Card unavailable</h2><p role="alert">{loadError}</p><button className="button button-secondary" onClick={() => { setLoading(true); setLoadError(''); setAttempt(value => value + 1); }}>Try again</button></section> : <>
         <p className="editor-intro">{card ? 'Edit your profile, links and images.' : 'Create an unpublished draft. Add links and images after saving.'}</p>
-        <div className="editor-layout"><section className="editor-section" aria-labelledby="profile-heading">
+        <div className={card ? "customization-layout" : undefined}><div className="editor-workspace"><div className="editor-layout"><section className="editor-section" aria-labelledby="profile-heading">
           <h2 id="profile-heading">Profile</h2><p className="section-help">Profile edits are saved only when you select Save profile.</p>
           <form onSubmit={save} aria-busy={busy}><fieldset disabled={busy || locked}>
             <div className="profile-form-grid">{profileFields.map(key => <div className={`form-field ${key === 'bio' || key === 'slug' ? 'form-wide' : ''}`} key={key}>
@@ -110,13 +129,14 @@ export function CardEditor({ origin, site, id, locked, onUnauthorized }: { origi
         </section>
         <aside className="editor-section editor-publication" aria-label="Publication"><h2>{card?.is_published ? 'Published' : 'Unpublished'}</h2><p className="section-help">{card?.is_published ? 'Your saved card is publicly visible.' : 'Your card is private until you publish it.'}</p>
           {card ? <><button className="button button-secondary" disabled={busy || locked} onClick={publication}>{card.is_published ? 'Unpublish card' : 'Publish card'}</button><p className="field-hint">Publication changes take effect immediately after confirmation.</p>
-            {profileDirty && <p className="field-hint">Save your profile first to include its latest changes.</p>}
+            {(profileDirty || appearanceDirty) && <p className="field-hint">Save your profile and appearance separately to include their latest changes.</p>}
             {card.is_published && <a className="button button-secondary" href={`/c/${encodeURIComponent(card.slug)}`} target="_blank" rel="noopener noreferrer">View public card (new tab)</a>}
             <hr /><button className="button button-secondary" disabled={busy || locked} onClick={remove}>Delete card</button></> : <p className="field-hint">Save your draft to enable links, images and publication.</p>}
         </aside></div>
         <p ref={feedback} tabIndex={-1} role="alert" className="editor-feedback">{error}</p><p role="status" className="editor-feedback">{message}</p>
-        {card && <><LinksEditor origin={origin} cardId={card.id} initial={card.links} confirm={confirm} onUnauthorized={onUnauthorized} markDirty={markDirty} disabled={busy || locked} />
-          <AssetsEditor origin={origin} cardId={card.id} initial={card.assets} markDirty={markDirty} confirm={confirm} onUnauthorized={onUnauthorized} disabled={busy || locked} /></>}
+        {card && <><AppearanceEditor draft={appearance} saved={savedAppearance} onChange={setAppearance} onSave={saveAppearance} disabled={busy || locked} fields={fields} /><LinksEditor onChange={updateLinks} origin={origin} cardId={card.id} initial={card.links} confirm={confirm} onUnauthorized={onUnauthorized} markDirty={markDirty} disabled={busy || locked} />
+          <AssetsEditor onChange={updateAssets} origin={origin} cardId={card.id} initial={card.assets} markDirty={markDirty} confirm={confirm} onUnauthorized={onUnauthorized} disabled={busy || locked} /></>}
+        </div>{card && <CardPreview card={card} draft={draft} appearance={appearance} dirty={profileDirty || appearanceDirty} origin={origin} assetVersion={assetVersion} onUnauthorized={onUnauthorized} />}</div>
       </>}
     </main><footer className="account-footer">A simple way to stay connected.</footer>{modal}
   </div>;
