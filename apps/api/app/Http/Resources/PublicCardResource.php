@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\CardAppearance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,6 +21,7 @@ class PublicCardResource extends JsonResource
             'website' => $this->website,
             'location' => $this->location,
             'template_key' => $this->template_key,
+            'theme_settings' => CardAppearance::publicTheme($this->theme_settings),
             'assets' => PublicCardAssetResource::collection($this->whenLoaded('assets')),
             'links' => $this->whenLoaded('links', fn () => PublicCardLinkResource::collection($this->links->where('is_visible', true)->values())),
         ];

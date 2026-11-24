@@ -60,7 +60,7 @@ class CardValidationTest extends TestCase
             'invalid publication' => ['is_published', 'yes', 'The is published field must be true or false.'],
             'null publication' => ['is_published', null, 'The is published field is required.'],
             'unsupported template' => ['template_key', 'premium', 'The selected template key is invalid.'],
-            'theme edits' => ['theme_settings', ['color' => 'red'], 'The theme settings field must be missing.'],
+            'unknown theme keys' => ['theme_settings', ['color' => 'red'], 'The theme settings field must be an array.'],
             'ownership' => ['user_id', '00000000-0000-4000-8000-000000000001', 'The user id field must be missing.'],
             'id injection' => ['id', '00000000-0000-4000-8000-000000000001', 'The id field must be missing.'],
             'non-text bio' => ['bio', ['unexpected'], 'The bio field must be a string.'],

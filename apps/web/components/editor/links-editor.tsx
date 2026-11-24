@@ -20,9 +20,10 @@ function LinkForm({ link, onSave, disabled, markDirty }: { link?: CardLink; onSa
     <button className="button button-secondary" type="submit">{link ? 'Save link' : 'Add link'}</button>
   </div></fieldset></form>;
 }
-export function LinksEditor({ origin, cardId, initial, confirm, onUnauthorized, markDirty, disabled }: PanelProps & { initial: CardLink[]; confirm: Confirm; markDirty: MarkDirty; disabled: boolean }) {
+export function LinksEditor({ origin, cardId, initial, confirm, onUnauthorized, markDirty, disabled, onChange }: PanelProps & { initial: CardLink[]; onChange: (links: CardLink[]) => void; confirm: Confirm; markDirty: MarkDirty; disabled: boolean }) {
   const [links, setLinks] = useState(initial); const [busy, setBusy] = useState(false); const running = useRef(false);
   const [error, setError] = useState(''); const [message, setMessage] = useState(''); const base = `/api/v1/cards/${cardId}/links`;
+  useEffect(() => { onChange(links); }, [links, onChange]);
   useEffect(() => { markDirty('link-operation', busy); return () => markDirty('link-operation', false); }, [busy, markDirty]);
   async function run(action: () => Promise<void>): Promise<boolean> {
     if (disabled || running.current) return false;

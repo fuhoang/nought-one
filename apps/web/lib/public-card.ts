@@ -3,20 +3,9 @@ import { cache } from 'react';
 import { apiOrigin } from './site-config';
 import { serverApiOrigin } from './server-api-origin';
 
-export type PublicCard = {
-  slug: string;
-  display_name: string;
-  job_title: string | null;
-  company: string | null;
-  bio: string | null;
-  phone: string | null;
-  email: string | null;
-  website: string | null;
-  location: string | null;
-  template_key: string;
-  links: { type: string; label: string; url: string }[];
-  assets: { type: 'avatar' | 'logo'; url: string }[];
-};
+export type { CardProfile as PublicCard } from './card-profile';
+import type { CardProfile as PublicCard } from './card-profile';
+import { appearanceOf } from './card-appearance';
 
 export class CardApiError extends Error {
   constructor() { super('The card service is temporarily unavailable.'); }
@@ -58,7 +47,7 @@ export function parsePublicCard(value: unknown, slug: string): PublicCard {
     assets.push({ type: asset.type as 'avatar' | 'logo', url: url.href });
   }
   return {
-    slug, display_name: value.display_name, template_key: value.template_key,
+    slug, display_name: value.display_name, ...appearanceOf(value),
     job_title: optional.job_title, company: optional.company, bio: optional.bio,
     phone: optional.phone, email: optional.email, location: optional.location,
     website: httpUrl(optional.website) ? optional.website : null, links, assets,
