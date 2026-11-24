@@ -233,7 +233,7 @@ in the local Downloads folder. Backups and monitoring remain deferred.
 
 ## Remaining roadmap
 
-Status reviewed 23 November 2026. PRs #17–#22 promoted the background-job report,
+Status reviewed 24 November 2026. PRs #17–#22 promoted the background-job report,
 editor regression/slug changes and frontend security updates through `develop`
 to `main`. Documentation and Git maintenance were promoted through PRs #23–#24.
 
@@ -243,7 +243,7 @@ to `main`. Documentation and Git maintenance were promoted through PRs #23–#24
 | Background processing | Verified: real queued jobs, automatic hourly recycling, graceful shutdown and isolated cleanup failure retries |
 | Editor/ownership regression | Passed: 221 Laravel tests / 1,110 assertions and desktop/mobile coverage; reserved application-route slugs enforced with existing-URL compatibility |
 | Frontend security update | Merged: Next.js 16.4.6, patched minimatch path; 74 browser tests passed, runtime audit clear at last check |
-| Development dependency advisory | Open: picomatch GHSA-fc5q-39xc-vjpf had no patch at the 17 November review; recheck upstream availability |
+| Development dependency advisory | Closed: picomatch advisory withdrawn as not a security issue; full npm audit reported zero vulnerabilities on 24 November |
 | Rollback rehearsal | Staging API rollback/restoration passed on 17 November; previous frontend image redeployment/restoration and authenticated continuity passed on 23 November (details below) |
 | Backups/PITR and isolated restoration | Deferred by owner; not enabled or claimed verified |
 | External uptime monitoring | Deferred by owner; provider and alerts not configured |
@@ -283,3 +283,18 @@ No schema reversal, credential extraction, test account creation or card mutatio
 was needed. This rehearses deployment recovery and session continuity between
 compatible images; it does not demonstrate recovery across incompatible code or
 schema changes, nor continuous zero-downtime availability during every instant.
+
+## Picomatch advisory follow-up — 24 November 2026
+
+[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
+was withdrawn on 18 November because it was determined not to be a security issue.
+The 17 November findings above remain historical evidence, not the current status.
+
+The npm registry still lists picomatch 4.0.7 as latest. A fresh full `npm audit
+--json` against the existing frontend lockfile exited successfully with **zero
+vulnerabilities**, including development dependencies. No package versions,
+lockfile, overrides or audit exclusions changed. Application tests were not rerun
+because this follow-up changes documentation only.
+
+The remaining operational tasks are backups/PITR with isolated restoration and
+external uptime monitoring, both still deferred by the owner.
