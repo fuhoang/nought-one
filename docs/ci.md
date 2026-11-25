@@ -9,7 +9,16 @@
 | `containers.yml` | `Container integration` | Production Docker builds, release-script unit tests, container health/non-root/smoke/shutdown checks, desktop/mobile Playwright tests |
 
 All three run on PRs targeting `main` or `develop`, pushes to either branch and
-manual dispatch. There are no path filters, so required checks cannot remain
+manual dispatch. API and Web CI also run on pushes to `feature/**`, providing
+PHPUnit/Pint and frontend lint/type/build feedback before a PR is opened.
+Container integration, including browser tests, waits until the PR is opened
+for feature branches. Committing locally does not trigger GitHub Actions; pushing does.
+
+Push and PR runs remain separate: push checks test the branch commit, while PR
+checks test GitHub's proposed merge with the target branch. An open feature PR
+therefore receives both API/Web runs on subsequent pushes. This intentionally
+retains merge validation without API lookups, extra permissions or skipped required
+checks. There are no path filters, so required checks cannot remain
 pending because only shared configuration or documentation changed. Superseded
 CI runs are cancelled per workflow and PR/ref. Manual container runs are not
 cancelled because an explicitly requested publication may be in progress.
